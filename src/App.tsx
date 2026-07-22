@@ -35,20 +35,22 @@ export default function App() {
 	return (
 		<CouponProvider>
 			<div className="tablet-stage">
-				<SavedCoupons />
-				<div className="tablet">
-					<div className="tablet__screen">
-						<LeftMenu />
-						<div className="tablet__main">
-							<TopBar />
-							<div className="tablet__content">
-								<MarketBar />
-								<MatchList />
+				<div className="tablet-layout">
+					<SavedCoupons />
+					<div className="tablet">
+						<div className="tablet__screen">
+							<LeftMenu />
+							<div className="tablet__main">
+								<TopBar />
+								<div className="tablet__content">
+									<MarketBar />
+									<MatchList />
+								</div>
 							</div>
 						</div>
 					</div>
+					<CouponPanel />
 				</div>
-				<CouponPanel />
 			</div>
 		</CouponProvider>
 	)

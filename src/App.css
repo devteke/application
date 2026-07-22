@@ -1,12 +1,3 @@
-.tablet-stage {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	/* Sayfa arka plan rengi YOK — oyun arkada görünsün. */
-}
-
 /* Tablet çerçevesi (bezel). Ekran 1280x800 kalsın diye padding kadar büyür. */
 .tablet {
 	--bezel: 16px;
@@ -67,11 +58,16 @@
 	background: rgba(255, 255, 255, 0.24);
 }
 
-.tablet-stage {
+.tablet-stage{
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: center;      /* dikey ortala */
+  justify-content: center;  /* yatay ortala */
+}
+
+.tablet-layout{
+  display: flex;
+  align-items: flex-start;  /* paneller tablet ile üstten hizalansın istersen */
   gap: 16px;
 }
-/* .tablet ölçüsü (1280×800) aynı kalıyor; paneller onun soluna/sağına düşer */

@@ -6,7 +6,7 @@ export default function CouponPanel() {
   const empty = active.length === 0
 
   return (
-    <aside className="kp">
+    <aside className={`kp${empty ? " is-collapsed" : ""}`}>
       <header className="kp__top">
         <span className="kp__title">KUPONUM</span>
         <span className="kp__count">{active.length}</span>
@@ -19,7 +19,9 @@ export default function CouponPanel() {
           <div className="kp-bet" key={b.eventId}>
             <div className="kp-bet__main">
               <span className="kp-bet__match">{b.eventName}</span>
-              <span className="kp-bet__mkt">{b.marketName} : <b className="kp-bet__pick">{b.pick}</b></span>
+              <span className="kp-bet__mkt">
+                {b.marketName} : <b className="kp-bet__pick">{b.pick}</b>
+              </span>
             </div>
             <span className="kp-bet__odd">{b.odd.toFixed(2)}</span>
             <button className="kp-bet__x" onClick={() => remove(b.eventId)} title="Kaldır">×</button>
@@ -29,8 +31,12 @@ export default function CouponPanel() {
 
       <div className="kp__misli">
         <span>Misli</span>
-        <input type="number" min={1} value={misli}
-          onChange={(e) => setMisli(parseInt(e.target.value, 10))} />
+        <input
+          type="number"
+          min={1}
+          value={misli}
+          onChange={(e) => setMisli(parseInt(e.target.value, 10))}
+        />
       </div>
 
       <div className="kp__sum">
