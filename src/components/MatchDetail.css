@@ -1,0 +1,90 @@
+.md {
+  padding: 12px;
+  background: #0b0d11;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  column-count: 2;
+  column-gap: 12px;
+}
+.md--state { column-count: 1; padding: 16px; color: #8b909c; font-size: 13px; }
+.md--err { color: #e56458; }
+
+.md-card {
+  break-inside: avoid;
+  margin: 0 0 12px;
+  background: #14161b;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.md-card__head {
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e7e9ee;
+  background: #1a1d24;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.md-mkt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+.md-mkt + .md-mkt { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+
+.md-mkt__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 44%;
+  min-width: 0;
+}
+.md-mkt__min {
+  flex: 0 0 auto;
+  min-width: 16px; height: 16px; padding: 0 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(224, 138, 60, 0.16);
+  color: #e08a3c;
+  border-radius: 3px;
+  font-size: 10px; font-weight: 700;
+}
+.md-mkt__name {
+  font-size: 12.5px;
+  color: #cdd2db;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.md-mkt__outcomes {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+/* çok seçenekli marketler (Skor, İY/MS…) alt alta ferah dursun */
+.md-mkt--stack { flex-direction: column; align-items: stretch; gap: 8px; }
+.md-mkt--stack .md-mkt__label { width: auto; }
+.md-mkt--stack .md-mkt__outcomes { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); }
+
+.md-oc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 9px;
+  background: #0d0f13;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  color: #e7e9ee;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.md-oc:hover { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.4); }
+.md-oc__lbl { color: #8b909c; font-weight: 500; }
+.md-oc__od { font-weight: 700; }
+
+.md-oc.is-off { cursor: default; opacity: 0.45; }
+.md-oc.is-off:hover { background: #0d0f13; border-color: rgba(255, 255, 255, 0.07); }
+.md-oc.is-off .md-oc__od { color: #626775; }

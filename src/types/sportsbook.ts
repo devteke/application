@@ -43,3 +43,36 @@ export interface EventsResponse {
     e: SbEvent[]
   }
 }
+
+// Mevcut SbOutcome yeniden kullanılıyor. Aşağıdakileri dosyaya EKLE:
+
+export interface DetailMarket {
+  i: number
+  v: number
+  st: number      // tip kodu (sbt ile aynı)
+  t: number
+  s: number
+  min: number
+  sbt: number     // kategori eşlemesi bununla yapılır
+  ov?: number
+  n: string
+  o: SbOutcome[]
+}
+
+export interface EventDetail {
+  i: number
+  n: string
+  d: number
+  st: string
+  cp: number
+  t: number
+  l: boolean
+  ph: string; phi: string; phid: number   // ev sahibi: ad / logo / id
+  pa: string; pai: string; paid: number   // deplasman
+  m: DetailMarket[] | null
+}
+
+export interface EventDetailResponse {
+  success: boolean
+  data: EventDetail
+}
