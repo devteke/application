@@ -8,6 +8,9 @@ import LeftMenu from './components/letfMenu'
 import MarketBar from './components/MarketBar'
 import TopBar from './components/Topbar'
 import MatchList from './components/MatchList'
+import { CouponProvider } from './context/CouponContext'
+import SavedCoupons from './components/SavedCoupons'
+import CouponPanel from './components/CouponPanel'
 
 
 debugData<boolean>([{ action: 'setVisible', data: true }])
@@ -30,19 +33,23 @@ export default function App() {
 	if (!visible) return null
 
 	return (
-		<div className="tablet-stage">
-			<div className="tablet">
-				<div className="tablet__screen">
-					<LeftMenu />
-					<div className="tablet__main">
-						<TopBar />
-						<div className="tablet__content">
-							<MarketBar />
-							<MatchList />
+		<CouponProvider>
+			<div className="tablet-stage">
+				<SavedCoupons />
+				<div className="tablet">
+					<div className="tablet__screen">
+						<LeftMenu />
+						<div className="tablet__main">
+							<TopBar />
+							<div className="tablet__content">
+								<MarketBar />
+								<MatchList />
+							</div>
 						</div>
 					</div>
 				</div>
+				<CouponPanel />
 			</div>
-		</div>
+		</CouponProvider>
 	)
 }

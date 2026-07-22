@@ -1,109 +1,133 @@
-import type { SbEvent, SbMarket, SbOutcome } from "../types/sportsbook"
+import type { SbEvent, SbMarket } from "../types/sportsbook"
+import type { Bet } from "../types/coupon"
 
-const DASH = "-"
+export const DASH = "-"
 const TZ = "Europe/Istanbul"
-const num = (v?: string) => (v == null ? 0 : parseFloat(v.replace(",", ".")))
+const MONTHS = ["OCA", "ŞUB", "MAR", "NİS", "MAY", "HAZ", "TEM", "AĞU", "EYL", "EKİ", "KAS", "ARA"]
+
+export interface Cell {
+  txt: string
+  bet: Bet | null
+}
 
 export interface MatchRowVM {
   id: number
-  start: number
   time: string
   sub: string
   name: string
   live: boolean
   mbs: number | null
   total: number
-  ms: [string, string, string]   // 1 / X / 2
-  cs: [string, string, string]   // 1-X / 1-2 / X-2
-  hcap: string                   // "+1h"
-  hms: [string, string, string]  // 1 / X / 2
-  auLine: string                 // "2,5"
-  auAlt: string
-  auUst: string
+  ms: Cell[]
+  cs: Cell[]
+  hcap: string
+  hms: Cell[]
+  auLine: string
+  auAlt: Cell
+  auUst: Cell
 }
 
-export interface DayGroup { key: string; label: string; rows: MatchRowVM[] }
-
-const outcome = (m: SbMarket | null, on: number): SbOutcome | null =>
-  m?.o.find((x) => x.on === on) ?? null
-
-// od <= 1 => kapalı/pasif => "-"
-const odd = (o: SbOutcome | null): string =>
-  o && o.od > 1 ? o.od.toFixed(2) : DASH
-
-const pick = (list: SbMarket[], t: number, s: number): SbMarket | null =>
-  list.find((x) => x.t === t && x.s === s) ?? null
-
-function hcapLabel(ov?: string): string {
-  if (ov == null) return ""
-  return `${num(ov) > 0 ? "+" : ""}${ov}h`
+export interface DayGroup {
+  key: string
+  label: string
+  rows: MatchRowVM[]
 }
 
-export function buildRow(ev: SbEvent): MatchRowVM {
-  const list = ev.m ?? []
+const num = (v: unknown) => {
+  const n = parseFloat(String(v ?? "").replace(",", "."))
+  return Number.isFinite(n) ? n : 0
+}
 
-  const ms = pick(list, 1, 1)   // Maç Sonucu
-  const cs = pick(list, 2, 92)  // Çifte Şans
+const nameOf = (ev: SbEvent) =>
+  ev.n?.trim() || (ev.p ?? []).map((x) => x.n).join(" - ")
 
-  // Handikap: birden fazla olabilir -> ana çizgiyi seç (|ov| en küçük, pozitif öncelik)
-  const hms =
-    list
-      .filter((x) => x.t === 2 && x.s === 100)
-      .sort((a, b) => Math.abs(num(a.ov)) - Math.abs(num(b.ov)) || num(b.ov) - num(a.ov))[0] ?? null
+const findMkt = (ev: SbEvent, sbt: number) =>
+  (ev.m ?? []).filter((m): m is SbMarket => !!m && m.sbt === sbt)
 
-  // Alt/Üst: 2.5 çizgisini tercih et
-  const aus = list.filter((x) => x.t === 2 && x.s === 101)
-  const au = aus.find((x) => x.ov === "2.5") ?? aus[0] ?? null
+const hcapLabel = (ov: unknown) => {
+  const n = num(ov)
+  const s = String(ov).replace(".", ",")
+  return n > 0 ? `+${s}` : s
+}
+
+function istParts(ms: number) {
+  const parts = new Intl.DateTimeFormat("tr-TR", {
+    timeZone: TZ, year: "numeric", month: "numeric", day: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date(ms))
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
+  return { y: +g("year"), mo: +g("month"), da: +g("day"), hh: g("hour"), mm: g("minute") }
+}
+
+const dayKey = (p: { y: number; mo: number; da: number }) =>
+  `${p.y}-${String(p.mo).padStart(2, "0")}-${String(p.da).padStart(2, "0")}`
+
+function dayInfo(ms: number) {
+  const p = istParts(ms)
+  const key = dayKey(p)
+  const today = dayKey(istParts(Date.now()))
+  const tomorrow = dayKey(istParts(Date.now() + 86400000))
+  const label = key === today ? "BUGÜN" : key === tomorrow ? "YARIN" : `${p.da} ${MONTHS[p.mo - 1]}`
+  return { key, label }
+}
+
+function cellFor(ev: SbEvent, mkt: SbMarket | undefined, on: number, pick: string): Cell {
+  const o = mkt?.o.find((x) => x.on === on)
+  if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
+  return {
+    txt: o.od.toFixed(2),
+    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on, pick, odd: o.od },
+  }
+}
+
+function altUstCell(ev: SbEvent, mkt: SbMarket | undefined, which: "Alt" | "Üst"): Cell {
+  const key = which.toLocaleLowerCase("tr")
+  const o = mkt?.o.find((x) => (x.n ?? "").toLocaleLowerCase("tr").startsWith(key))
+  if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
+  return {
+    txt: o.od.toFixed(2),
+    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on: o.on, pick: which, odd: o.od },
+  }
+}
+
+function buildRow(ev: SbEvent): MatchRowVM {
+  const p = istParts(ev.d)
+  const ms = findMkt(ev, 1)[0]
+  const cs = findMkt(ev, 92)[0]
+  const hcaps = findMkt(ev, 100)
+  const hcap = [...hcaps].sort(
+    (a, b) => Math.abs(num(a.ov)) - Math.abs(num(b.ov)) || num(b.ov) - num(a.ov),
+  )[0]
+  const aus = findMkt(ev, 101)
+  const au = aus.find((m) => num(m.ov) === 2.5) ?? [...aus].sort((a, b) => num(a.ov) - num(b.ov))[0]
 
   return {
     id: ev.i,
-    start: ev.d,
-    time: fmtTime(ev.d),
-    sub: ev.ct ?? DASH,               // şimdilik ülke kodu (lig kısa adı left-menu ile bağlanacak)
-    name: ev.n,
+    time: `${p.hh}:${p.mm}`,
+    sub: ev.ct ?? "",
+    name: nameOf(ev),
     live: !!ev.l,
     mbs: ev.mbs ?? null,
     total: ev.t ?? 0,
-    ms: [odd(outcome(ms, 1)), odd(outcome(ms, 2)), odd(outcome(ms, 3))],   // on2 = "0" = X
-    cs: [odd(outcome(cs, 1)), odd(outcome(cs, 2)), odd(outcome(cs, 3))],
-    hcap: hms ? hcapLabel(hms.ov) : "",
-    hms: [odd(outcome(hms, 1)), odd(outcome(hms, 2)), odd(outcome(hms, 3))],
-    auLine: au?.ov ? au.ov.replace(".", ",") : "",
-    auAlt: odd(outcome(au, 1)),
-    auUst: odd(outcome(au, 2)),
+    ms: [cellFor(ev, ms, 1, "1"), cellFor(ev, ms, 2, "X"), cellFor(ev, ms, 3, "2")],
+    cs: [cellFor(ev, cs, 1, "1-X"), cellFor(ev, cs, 2, "1-2"), cellFor(ev, cs, 3, "X-2")],
+    hcap: hcap ? hcapLabel(hcap.ov) : DASH,
+    hms: [cellFor(ev, hcap, 1, "1"), cellFor(ev, hcap, 2, "X"), cellFor(ev, hcap, 3, "2")],
+    auLine: au ? String(au.ov).replace(".", ",") : DASH,
+    auAlt: altUstCell(ev, au, "Alt"),
+    auUst: altUstCell(ev, au, "Üst"),
   }
 }
 
-function ymd(ms: number): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(ms)
-}
-
-function fmtTime(ms: number): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    timeZone: TZ, hour: "2-digit", minute: "2-digit",
-  }).format(ms)
-}
-
-const MONTHS = ["OCA","ŞUB","MAR","NİS","MAY","HAZ","TEM","AĞU","EYL","EKİ","KAS","ARA"]
-function dayLabel(key: string): string {
-  const now = Date.now()
-  if (key === ymd(now)) return "BUGÜN"
-  if (key === ymd(now + 86_400_000)) return "YARIN"
-  const [, m, d] = key.split("-").map(Number)
-  return `${d} ${MONTHS[m - 1]}`
-}
-
-// Tarihe göre sırala + güne göre grupla
 export function buildGroups(events: SbEvent[]): DayGroup[] {
-  const rows = events.map(buildRow).sort((a, b) => a.start - b.start)
-  const map = new Map<string, MatchRowVM[]>()
-  for (const r of rows) {
-    const k = ymd(r.start)
-    const arr = map.get(k)
-    if (arr) arr.push(r)
-    else map.set(k, [r])
+  const sorted = [...events].sort((a, b) => a.d - b.d)
+  const groups: DayGroup[] = []
+  const index = new Map<string, DayGroup>()
+  for (const ev of sorted) {
+    const { key, label } = dayInfo(ev.d)
+    let g = index.get(key)
+    if (!g) { g = { key, label, rows: [] }; index.set(key, g); groups.push(g) }
+    g.rows.push(buildRow(ev))
   }
-  return [...map].map(([key, rows]) => ({ key, label: dayLabel(key), rows }))
+  return groups
 }

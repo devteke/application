@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useEvents } from "../hooks/useEvents"
-import { buildGroups, type MatchRowVM } from "../utils/mapEvents"
+import { buildGroups, type MatchRowVM, type Cell } from "../utils/mapEvents"
+import { useCoupon } from "../context/CouponContext"
 import MatchDetail from "./MatchDetail"
 import "./MatchList.css"
 
@@ -13,8 +14,6 @@ export default function MatchList() {
   if (error) return <div className="ml-state ml-state--err">Veri alınamadı ({error})</div>
   if (!groups.length) return <div className="ml-state">Maç bulunamadı.</div>
 
-  const toggle = (id: number) => setOpenId((cur) => (cur === id ? null : id))
-
   return (
     <div className="ml">
       {groups.map((g) => (
@@ -22,7 +21,7 @@ export default function MatchList() {
           <div className="ml-daybar">{g.label}</div>
           {g.rows.map((r) => (
             <div key={r.id}>
-              <MatchRow r={r} open={openId === r.id} onToggle={() => toggle(r.id)} />
+              <MatchRow r={r} open={openId === r.id} onToggle={() => setOpenId((o) => (o === r.id ? null : r.id))} />
               {openId === r.id && <MatchDetail id={r.id} />}
             </div>
           ))}
@@ -32,21 +31,14 @@ export default function MatchList() {
   )
 }
 
-function MatchRow({
-  r, open, onToggle,
-}: {
-  r: MatchRowVM
-  open: boolean
-  onToggle: () => void
-}) {
+function MatchRow({ r, open, onToggle }: { r: MatchRowVM; open: boolean; onToggle: () => void }) {
   return (
-    <div className={`mr${open ? " is-open" : ""}`} onClick={onToggle}>
-      <div className="mr-time">
+    <div className={`mr${open ? " is-open" : ""}`}>
+      <div className="mr-time" onClick={onToggle}>
         <span className="mr-time__h">{r.time}</span>
         <span className="mr-time__d">{r.sub}</span>
       </div>
-
-      <div className="mr-info">
+      <div className="mr-info" onClick={onToggle}>
         <span className="mr-name">{r.name}</span>
         <span className="mr-icons">
           {r.live && <span className="mr-ic mr-ic--live">●</span>}
@@ -54,14 +46,15 @@ function MatchRow({
         </span>
       </div>
 
-      <Odd v={r.ms[0]} /><Odd v={r.ms[1]} /><Odd v={r.ms[2]} />
-      <Odd v={r.cs[0]} /><Odd v={r.cs[1]} /><Odd v={r.cs[2]} />
+      <OddCell c={r.ms[0]} /><OddCell c={r.ms[1]} /><OddCell c={r.ms[2]} />
+      <OddCell c={r.cs[0]} /><OddCell c={r.cs[1]} /><OddCell c={r.cs[2]} />
       <div className="mr-badge">{r.hcap}</div>
-      <Odd v={r.hms[0]} /><Odd v={r.hms[1]} /><Odd v={r.hms[2]} />
-      <Odd v={r.auAlt} />
+      <OddCell c={r.hms[0]} /><OddCell c={r.hms[1]} /><OddCell c={r.hms[2]} />
+      <OddCell c={r.auAlt} />
       <div className="mr-line">{r.auLine}</div>
-      <Odd v={r.auUst} />
-      <div className="mr-total">
+      <OddCell c={r.auUst} />
+
+      <div className="mr-total" onClick={onToggle}>
         +{r.total}
         <span className={`mr-total__ch${open ? " is-open" : ""}`}>▾</span>
       </div>
@@ -69,6 +62,16 @@ function MatchRow({
   )
 }
 
-function Odd({ v }: { v: string }) {
-  return <div className={`mr-odd${v === "-" ? " is-empty" : ""}`}>{v}</div>
+function OddCell({ c }: { c: Cell }) {
+  const { isPicked, pick } = useCoupon()
+  if (!c.bet) return <div className="mr-odd is-empty">{c.txt}</div>
+  const active = isPicked(c.bet.eventId, c.bet.marketId, c.bet.on)
+  return (
+    <button
+      className={`mr-odd mr-odd--btn${active ? " is-active" : ""}`}
+      onClick={(e) => { e.stopPropagation(); pick(c.bet!) }}
+    >
+      {c.txt}
+    </button>
+  )
 }

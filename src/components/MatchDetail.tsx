@@ -2,8 +2,8 @@ import { useEventDetail } from "../hooks/useEventDetail"
 import { groupDetailMarkets } from "../utils/mapDetail"
 import type { DetailMarket, SbOutcome } from "../types/sportsbook"
 import "./MatchDetail.css"
+import { useCoupon } from "../context/CouponContext"
 
-// bare "0" = beraberlik => X
 const ocLabel = (n: string) => (n === "0" ? "X" : n)
 
 export default function MatchDetail({ id }: { id: number }) {
@@ -16,13 +16,16 @@ export default function MatchDetail({ id }: { id: number }) {
   const groups = groupDetailMarkets(detail.m ?? [])
   if (!groups.length) return <div className="md md--state">Bu maç için ek market yok.</div>
 
+  // maç bilgisini hazırla
+  const ev = { id: detail.i, name: `${detail.ph} - ${detail.pa}` }
+
   return (
     <div className="md">
       {groups.map((g) => (
         <section className="md-card" key={g.key}>
           <header className="md-card__head">{g.label}</header>
           <div className="md-card__body">
-            {g.markets.map((m) => <MarketRow key={m.i} m={m} />)}
+            {g.markets.map((m) => <MarketRow key={m.i} m={m} ev={ev} />)}
           </div>
         </section>
       ))}
@@ -30,8 +33,10 @@ export default function MatchDetail({ id }: { id: number }) {
   )
 }
 
-function MarketRow({ m }: { m: DetailMarket }) {
+function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string } }) {
+  const { isPicked, pick } = useCoupon()
   const stack = m.o.length > 3
+
   return (
     <div className={`md-mkt${stack ? " md-mkt--stack" : ""}`}>
       <div className="md-mkt__label">
@@ -41,11 +46,24 @@ function MarketRow({ m }: { m: DetailMarket }) {
       <div className="md-mkt__outcomes">
         {m.o.map((o: SbOutcome, i) => {
           const open = o.od > 1
+          const active = isPicked(ev.id, m.i, o.on)
           return (
             <button
               key={o.on ?? i}
-              className={`md-oc${open ? "" : " is-off"}`}
+              className={`md-oc${open ? "" : " is-off"}${active ? " is-active" : ""}`}
               disabled={!open}
+              onClick={() =>
+                open &&
+                pick({
+                  eventId: ev.id,
+                  eventName: ev.name,
+                  marketId: m.i,
+                  marketName: m.n,
+                  on: o.on,
+                  pick: ocLabel(o.n),
+                  odd: o.od,
+                })
+              }
             >
               <span className="md-oc__lbl">{ocLabel(o.n)}</span>
               <span className="md-oc__od">{open ? o.od.toFixed(2) : "-"}</span>

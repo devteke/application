@@ -66,3 +66,12 @@
 .tablet__content::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.24);
 }
+
+.tablet-stage {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+}
+/* .tablet ölçüsü (1280×800) aynı kalıyor; paneller onun soluna/sağına düşer */

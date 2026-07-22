@@ -202,3 +202,21 @@
 .mr-total__ch.is-open {
   transform: rotate(180deg);
 }
+
+.mr-time, .mr-info, .mr-total { cursor: pointer; }
+.mr.is-open { background: #14161b; }
+.mr-total__ch { transition: transform 0.15s ease; }
+.mr-total__ch.is-open { transform: rotate(180deg); }
+
+/* oran hücresi artık buton */
+.mr-odd--btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.mr-odd--btn:hover { background: rgba(52, 211, 153, 0.14); }
+.mr-odd--btn.is-active { background: #34d399; color: #0b0d11; font-weight: 700; }

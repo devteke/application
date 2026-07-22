@@ -88,3 +88,7 @@
 .md-oc.is-off { cursor: default; opacity: 0.45; }
 .md-oc.is-off:hover { background: #0d0f13; border-color: rgba(255, 255, 255, 0.07); }
 .md-oc.is-off .md-oc__od { color: #626775; }
+
+.md-oc.is-active { background: #34d399; border-color: #34d399; color: #0b0d11; }
+.md-oc.is-active .md-oc__lbl { color: rgba(11, 13, 17, 0.72); }
+.md-oc.is-active:hover { background: #34d399; }
