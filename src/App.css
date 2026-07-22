@@ -1,0 +1,68 @@
+.tablet-stage {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* Sayfa arka plan rengi YOK — oyun arkada görünsün. */
+}
+
+/* Tablet çerçevesi (bezel). Ekran 1280x800 kalsın diye padding kadar büyür. */
+.tablet {
+	--bezel: 16px;
+	padding: var(--bezel);
+	background: linear-gradient(145deg, #2b2b2f, #141416);
+	border-radius: 34px;
+	box-shadow:
+		0 30px 60px rgba(0, 0, 0, 0.55),
+		inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+
+.tablet__screen {
+	width: 1280px;
+	height: 800px;
+	border-radius: 12px;
+	background: #0b0b0d;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+	overflow: hidden;
+	display: flex;
+	/* eklendi: left menu + ana alan yan yana */
+}
+
+/* Kalan alan — şimdilik boş, sonra maç listesi gelecek */
+.tablet__main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.tablet__content {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-gutter: stable;
+	/* scrollbar için sabit yer ayır → içerik kaymaz */
+
+	/* Firefox */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+/* WebKit (Chrome/Edge/FiveM CEF) — left menu ile aynı stil */
+.tablet__content::-webkit-scrollbar {
+	width: 8px;
+}
+
+.tablet__content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.tablet__content::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.14);
+	border-radius: 4px;
+}
+
+.tablet__content::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.24);
+}

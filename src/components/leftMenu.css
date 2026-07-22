@@ -1,0 +1,300 @@
+.lm {
+	--accent: #34d399;
+	width: 290px;
+	height: 100%;
+	overflow: hidden;
+	will-change: width;
+	background: #14161b;
+	border-right: 1px solid rgba(255, 255, 255, 0.06);
+	display: flex;
+	flex-direction: column;
+	color: #e7e9ee;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	transition: width 0.2s ease;
+}
+
+/* --- Header + daralt/genişlet butonu --- */
+.lm__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 16px 12px;
+}
+
+.lm__title {
+	font-size: 13px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #626775;
+	font-weight: 600;
+}
+
+.lm__toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	flex: 0 0 auto;
+	border: none;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.05);
+	color: #8b909c;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lm__toggle:hover {
+	background: #222732;
+	color: #e7e9ee;
+}
+
+.lm__toggle svg {
+	width: 16px;
+	height: 16px;
+	transition: transform 0.2s ease;
+}
+
+/* --- Liste --- */
+.lm__list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 6px 10px 16px;
+}
+
+.lm__list::-webkit-scrollbar {
+	width: 8px;
+}
+
+.lm__list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 4px;
+}
+
+.lm__state {
+	padding: 16px;
+	text-align: center;
+	color: #8b909c;
+}
+
+/* --- Ana tab (spor) --- */
+.lm-sport {
+	margin-bottom: 4px;
+}
+
+.lm-sport__head {
+	position: relative;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 11px 12px;
+	background: transparent;
+	border: none;
+	border-radius: 10px;
+	color: inherit;
+	cursor: pointer;
+	font-family: inherit;
+	transition: background 0.15s ease;
+}
+
+.lm-sport__head:hover,
+.lm-sport__head.is-open {
+	background: #1a1d24;
+}
+
+.lm-sport__head.is-open::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 9px;
+	bottom: 9px;
+	width: 3px;
+	border-radius: 3px;
+	background: var(--accent);
+}
+
+.lm-sport__icon {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.05);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+	flex: 0 0 auto;
+}
+
+.lm-sport__name {
+	flex: 1;
+	text-align: left;
+	font-size: 14.5px;
+	font-weight: 600;
+}
+
+.lm-sport__head.is-open .lm-sport__name {
+	color: var(--accent);
+}
+
+.lm-count {
+	flex: 0 0 auto;
+	min-width: 26px;
+	text-align: center;
+	padding: 2px 8px;
+	font-size: 11.5px;
+	font-weight: 600;
+	color: #8b909c;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 20px;
+}
+
+.lm-chev {
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	color: #626775;
+	transition: transform 0.18s ease;
+}
+
+.lm-sport__head.is-open .lm-chev {
+	transform: rotate(90deg);
+	color: var(--accent);
+}
+
+.lm-chev--sm {
+	width: 12px;
+	height: 12px;
+}
+
+/* --- Sub (ülke) --- */
+.lm-sport__body {
+	padding: 2px 0 6px 8px;
+}
+
+.lm-country__head {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px 12px 9px 14px;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	color: inherit;
+	cursor: pointer;
+	font-family: inherit;
+	transition: background 0.12s ease;
+}
+
+.lm-country__head:hover,
+.lm-country__head.is-open {
+	background: #1a1d24;
+}
+
+.lm-flag {
+	width: 20px;
+	height: 20px;
+	border-radius: 5px;
+	background: linear-gradient(135deg, #3a3f4b, #2a2e38);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+	flex: 0 0 auto;
+}
+
+.lm-country__name {
+	flex: 1;
+	text-align: left;
+	font-size: 13.5px;
+	font-weight: 500;
+}
+
+.lm-country__head.is-open .lm-chev--sm {
+	transform: rotate(90deg);
+	color: #8b909c;
+}
+
+/* --- Ligler --- */
+.lm-leagues {
+	list-style: none;
+	margin: 0;
+	padding: 2px 0 6px;
+}
+
+.lm-league {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px 8px 46px;
+	border-radius: 7px;
+	cursor: pointer;
+	transition: background 0.12s ease;
+}
+
+.lm-league::before {
+	content: '';
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: #626775;
+	flex: 0 0 auto;
+}
+
+.lm-league:hover {
+	background: #1a1d24;
+}
+
+.lm-league__name {
+	flex: 1;
+	font-size: 13px;
+	color: #8b909c;
+}
+
+.lm-league:hover .lm-league__name {
+	color: #e7e9ee;
+}
+
+.lm-league__count {
+	flex: 0 0 auto;
+	font-size: 11.5px;
+	color: #626775;
+}
+
+/* --- Daraltılmış (rail) mod: sadece ikon + sayı --- */
+.lm--collapsed {
+	width: 76px;
+}
+
+.lm--collapsed .lm__header {
+	justify-content: center;
+	padding: 16px 8px 12px;
+}
+
+.lm--collapsed .lm__toggle svg {
+	transform: rotate(180deg);
+}
+
+.lm--collapsed .lm__list {
+	padding: 6px 8px 16px;
+}
+
+.lm--collapsed .lm-sport__name,
+.lm--collapsed .lm-chev {
+	display: none;
+}
+
+.lm--collapsed .lm-sport__head {
+	flex-direction: column;
+	gap: 5px;
+	padding: 10px 4px;
+	justify-content: center;
+}
+
+.lm--collapsed .lm-sport__head.is-open::before {
+	top: 8px;
+	bottom: 8px;
+}
+
+.lm--collapsed .lm-count {
+	min-width: 0;
+	padding: 1px 7px;
+}
