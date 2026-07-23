@@ -63,7 +63,33 @@ function istParts(ms: number) {
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
   return { y: +g("year"), mo: +g("month"), da: +g("day"), hh: g("hour"), mm: g("minute") }
 }
+const WEEKDAY_TR_LONG: Record<string, string> = {
+  Sun: "Pazar", Mon: "Pazartesi", Tue: "Salı", Wed: "Çarşamba",
+  Thu: "Perşembe", Fri: "Cuma", Sat: "Cumartesi",
+}
+function istWeekdayLong(ms: number): string {
+  const wd = IST_WEEKDAY_DTF.format(new Date(ms))
+  return WEEKDAY_TR_LONG[wd] ?? wd
+}
 
+// Liste hücresi (lige göre): Bugün / Yarın / kısaltma (Pzt…)
+export function dayShortLabel(ms: number): string {
+  const key = dayKey(istParts(ms))
+  const { today, tomorrow } = getTT()
+  if (key === today) return "Bugün"
+  if (key === tomorrow) return "Yarın"
+  return istWeekday(ms)
+}
+
+// Tarih dropdown'u: Bugün / Yarın / "23 Tem · Cumartesi"
+export function dayOptionLabel(ms: number): string {
+  const p = istParts(ms)
+  const key = dayKey(p)
+  const { today, tomorrow } = getTT()
+  if (key === today) return "Bugün"
+  if (key === tomorrow) return "Yarın"
+  return `${p.da} ${MONTHS[p.mo - 1]} · ${istWeekdayLong(ms)}`
+}
 const WEEKDAY_TR: Record<string, string> = {
   Sun: "Paz", Mon: "Pzt", Tue: "Sal", Wed: "Çar", Thu: "Per", Fri: "Cum", Sat: "Cmt",
 }
@@ -131,7 +157,7 @@ function buildRow(ev: SbEvent, leagueMap?: LeagueMap): MatchRowVM {
     id: ev.i,
     time: `${p.hh}:${p.mm}`,
     leagueCode: leagueMap?.get(ev.cp)?.code || ev.ct || String(ev.cp),
-    dayShort: istWeekday(ev.d),
+    dayShort: dayShortLabel(ev.d),
     name: nameOf(ev),
     live: !!ev.l,
     mbs: ev.mbs ?? null,
