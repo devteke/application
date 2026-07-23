@@ -16,6 +16,8 @@ import CouponPanel from './components/CouponPanel'
 debugData<boolean>([{ action: 'setVisible', data: true }])
 
 export default function App() {
+
+  const [view, setView] = useState<"markets" | "savedCoupons">("markets")
   const [visible, setVisible] = useState(false)
   useNuiEvent<boolean>('setVisible', setVisible)
 
