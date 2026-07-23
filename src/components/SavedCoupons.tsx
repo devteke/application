@@ -2,14 +2,21 @@ import { useState } from "react"
 import { useCoupon } from "../context/CouponContext"
 import "./SavedCoupons.css"
 
-export default function SavedCoupons() {
+export default function SavedCoupons({
+  embedded,
+  onBack,
+}: { embedded?: boolean; onBack?: () => void }) {
   const { saved, removeSaved } = useCoupon()
   const [openId, setOpenId] = useState<string | null>(null)
 
   return (
-    <aside className="sk">
-      <header className="sk__head">Kayıtlı Kuponlar <span className="sk__badge">{saved.length}</span></header>
-      {saved.length === 0 && <div className="sk__empty">Henüz kayıtlı kupon yok.</div>}
+     <div className={`sk${embedded ? " sk--embedded" : ""}`}>
+    <header className="sk__head">
+      {embedded && (
+        <button className="sk__back" onClick={() => onBack?.()} title="Geri">‹</button>
+      )}
+      Kayıtlı Kuponlar <span className="sk__badge">{saved.length}</span>
+    </header>
 
       <div className="sk__list">
         {saved.map((c, i) => {
@@ -43,6 +50,6 @@ export default function SavedCoupons() {
           )
         })}
       </div>
-    </aside>
+    </div>
   )
 }

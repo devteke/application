@@ -298,3 +298,66 @@
 	min-width: 0;
 	padding: 1px 7px;
 }
+
+.lm__footer{
+  padding: 10px 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(10,10,16,0.35);
+}
+
+.lm-footbtn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.04);
+  color: #e7e9ee;
+  cursor: pointer;
+  font-family: inherit;
+
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.lm-footbtn:hover{
+  background: rgba(52,211,153,0.12);
+}
+
+.lm-footbtn__ic{
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+
+.lm-footbtn__txt{
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lm-footbtn--muted:hover{
+  background: rgba(255,255,255,0.06);
+}
+
+/* collapsed modda sadece ikon kalsın */
+.lm--collapsed .lm__footer{
+  padding: 10px 8px 12px;
+}
+.lm--collapsed .lm-footbtn{
+  justify-content: center;
+  padding: 10px 6px;
+}
+.lm--collapsed .lm-footbtn__txt{
+  display: none;
+}

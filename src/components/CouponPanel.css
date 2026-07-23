@@ -1,5 +1,5 @@
 .kp {
-  width: 320px;
+  width: 310px;
   flex: 0 0 auto;
   align-self: flex-start;
   max-height: 800px;               /* tablet yüksekliğiyle uyum */
@@ -182,14 +182,7 @@
 
 .kp__icon:disabled, .kp__play:disabled { opacity: 0.45; cursor: default; }
 
-/* Collapsed: empty iken sadece header görünsün */
-.kp.is-collapsed {
-  width: 64px;
-}
-.kp.is-collapsed .kp__title,
-.kp.is-collapsed .kp__odd {
-  display: none;
-}
+/* Collapsed: içerikleri gizle, genişlik sabit */
 .kp.is-collapsed .kp__list,
 .kp.is-collapsed .kp__misli,
 .kp.is-collapsed .kp__sum,
@@ -197,8 +190,15 @@
 .kp.is-collapsed .kp__actions {
   display: none;
 }
+
 .kp.is-collapsed .kp__top {
   justify-content: center;
+  padding: 10px;
+}
+
+.kp.is-collapsed .kp__title,
+.kp.is-collapsed .kp__odd {
+  display: none;
 }
 
 /* Scrollbar (CEF/Chrome) */
