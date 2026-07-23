@@ -38,12 +38,12 @@ export default function App() {
         <div className="tablet-wrap">
           <div className="tablet">
             <div className="tablet__screen">
-              <LeftMenu
-                onOpenSavedCoupons={() => setView('savedCoupons')}
-                onOpenMarkets={() => setView('markets')}
-              />
-
               <FiltersProvider>
+                <LeftMenu
+                  onOpenSavedCoupons={() => setView('savedCoupons')}
+                  onOpenMarkets={() => setView('markets')}
+                />
+
                 <div className="tablet__main">
                   <TopBar />
 
@@ -62,7 +62,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* CouponPanel: layout'u itmesin diye tablet-wrap içinde absolute konumlanacak */}
+
           <CouponPanel />
         </div>
       </div>

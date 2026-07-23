@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './leftMenu.css'
 import { fetchLeftMenu } from '../services/leftMenu'
 import type { SportCategory } from '../types/leftMenu'
+import { useFilters } from '../context/FiltersContext'
 
 const SPORT_ICONS: Record<string, string> = {
 	SOCCER: '⚽',
@@ -42,7 +43,12 @@ export default function LeftMenu(props: {
 	const [openCountries, setOpenCountries] = useState<Set<string>>(new Set())
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const { leagueSel, setLeagueSel } = useFilters()
 
+	const selectLeague = (cp: number) => {
+		onOpenMarkets?.()                                  // kupon ekranındaysa bültene dön
+		setLeagueSel(leagueSel === cp ? null : cp)         // aynısına tıklama = kaldır
+	}
 	useEffect(() => {
 		let cancelled = false
 		fetchLeftMenu()
@@ -165,12 +171,15 @@ export default function LeftMenu(props: {
 														<ul className="lm-leagues">
 															{leagues.map((league) => (
 																<li key={league.i} className="lm-league">
-																	<span className="lm-league__name">
-																		{league.n}
-																	</span>
-																	<span className="lm-league__count">
-																		{league.t}
-																	</span>
+																	<button
+																		type="button"
+																		className={'lm-league__btn' + (leagueSel === league.i ? ' is-active' : '')}
+																		onClick={() => selectLeague(league.i)}
+																		title={league.n}
+																	>
+																		<span className="lm-league__name">{league.n}</span>
+																		<span className="lm-league__count">{league.t}</span>
+																	</button>
 																</li>
 															))}
 														</ul>
