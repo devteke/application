@@ -13,7 +13,8 @@ export interface Cell {
 export interface MatchRowVM {
   id: number
   time: string
-  sub: string
+  leagueCode: string
+  dayShort: string
   name: string
   live: boolean
   mbs: number | null
@@ -58,11 +59,18 @@ function istParts(ms: number) {
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
   return { y: +g("year"), mo: +g("month"), da: +g("day"), hh: g("hour"), mm: g("minute") }
 }
+const WEEKDAY_TR: Record<string, string> = {
+  Sun: "Paz", Mon: "Pzt", Tue: "Sal", Wed: "Çar", Thu: "Per", Fri: "Cum", Sat: "Cmt",
+}
+function istWeekday(ms: number): string {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(new Date(ms))
+  return WEEKDAY_TR[wd] ?? wd
+}
 
 const dayKey = (p: { y: number; mo: number; da: number }) =>
   `${p.y}-${String(p.mo).padStart(2, "0")}-${String(p.da).padStart(2, "0")}`
 
-function dayInfo(ms: number) {
+export function dayInfo(ms: number) {
   const p = istParts(ms)
   const key = dayKey(p)
   const today = dayKey(istParts(Date.now()))
@@ -90,7 +98,7 @@ function altUstCell(ev: SbEvent, mkt: SbMarket | undefined, which: "Alt" | "Üst
   }
 }
 
-function buildRow(ev: SbEvent): MatchRowVM {
+function buildRow(ev: SbEvent, leagueMap?: LeagueMap): MatchRowVM {
   const p = istParts(ev.d)
   const ms = findMkt(ev, 1)[0]
   const cs = findMkt(ev, 92)[0]
@@ -104,7 +112,8 @@ function buildRow(ev: SbEvent): MatchRowVM {
   return {
     id: ev.i,
     time: `${p.hh}:${p.mm}`,
-    sub: ev.ct ?? "",
+    leagueCode: leagueMap?.get(ev.cp)?.code || ev.ct || String(ev.cp),
+    dayShort: istWeekday(ev.d),
     name: nameOf(ev),
     live: !!ev.l,
     mbs: ev.mbs ?? null,
@@ -119,7 +128,43 @@ function buildRow(ev: SbEvent): MatchRowVM {
   }
 }
 
-export function buildGroups(events: SbEvent[]): DayGroup[] {
+export type SortMode = "date" | "league"
+
+export interface LeagueInfo {
+  league: string
+  country: string
+  code: string
+  order: number
+}
+export type LeagueMap = Map<number, LeagueInfo>
+
+export interface EventFilters {
+  singleMatch: boolean
+  dateSel: string | null   // dayKey (örn "2026-07-23")
+  leagueSel: number | null // cp
+  mbsSel: number[]         // çoklu; boşsa filtre yok
+}
+
+export function eventDayKey(ms: number): string {
+  return dayKey(istParts(ms))
+}
+
+export function filterEvents(events: SbEvent[], f: EventFilters): SbEvent[] {
+  return events.filter((ev) => {
+    if (f.singleMatch && ev.mbs !== 1) return false
+    if (f.dateSel && eventDayKey(ev.d) !== f.dateSel) return false
+    if (f.leagueSel != null && ev.cp !== f.leagueSel) return false
+    if (f.mbsSel.length > 0 && (ev.mbs == null || !f.mbsSel.includes(ev.mbs))) return false
+    return true
+  })
+}
+
+export function buildGroups(
+  events: SbEvent[],
+  opts: { sort?: SortMode; leagueMap?: LeagueMap } = {},
+): DayGroup[] {
+  if (opts.sort === "league") return buildLeagueGroups(events, opts.leagueMap)
+
   const sorted = [...events].sort((a, b) => a.d - b.d)
   const groups: DayGroup[] = []
   const index = new Map<string, DayGroup>()
@@ -127,7 +172,27 @@ export function buildGroups(events: SbEvent[]): DayGroup[] {
     const { key, label } = dayInfo(ev.d)
     let g = index.get(key)
     if (!g) { g = { key, label, rows: [] }; index.set(key, g); groups.push(g) }
-    g.rows.push(buildRow(ev))
+    g.rows.push(buildRow(ev, opts.leagueMap))
   }
   return groups
+}
+
+function buildLeagueGroups(events: SbEvent[], leagueMap?: LeagueMap): DayGroup[] {
+  const sorted = [...events].sort((a, b) => a.d - b.d)
+  const index = new Map<number, { g: DayGroup; order: number }>()
+  const list: Array<{ g: DayGroup; order: number }> = []
+  for (const ev of sorted) {
+    let entry = index.get(ev.cp)
+    if (!entry) {
+      const info = leagueMap?.get(ev.cp)
+      const label = info ? `${info.country} · ${info.league}` : `Lig ${ev.cp}`
+      entry = { g: { key: String(ev.cp), label, rows: [] }, order: info?.order ?? Number.MAX_SAFE_INTEGER }
+      index.set(ev.cp, entry)
+      list.push(entry)
+    }
+    entry.g.rows.push(buildRow(ev, leagueMap))
+  }
+  return list
+    .sort((a, b) => a.order - b.order || a.g.label.localeCompare(b.g.label, "tr"))
+    .map((e) => e.g)
 }

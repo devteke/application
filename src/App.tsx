@@ -11,7 +11,7 @@ import MatchList from './components/MatchList'
 import { CouponProvider } from './context/CouponContext'
 import SavedCoupons from './components/SavedCoupons'
 import CouponPanel from './components/CouponPanel'
-
+import { FiltersProvider } from './context/FiltersContext'
 debugData<boolean>([{ action: 'setVisible', data: true }])
 
 export default function App() {
@@ -43,20 +43,22 @@ export default function App() {
                 onOpenMarkets={() => setView('markets')}
               />
 
-              <div className="tablet__main">
-                <TopBar />
+              <FiltersProvider>
+                <div className="tablet__main">
+                  <TopBar />
 
-                <div className="tablet__content">
-                  {view === 'markets' ? (
-                    <>
-                      <MarketBar />
-                      <MatchList />
-                    </>
-                  ) : (
-                    <SavedCoupons embedded onBack={() => setView('markets')} />
-                  )}
+                  <div className="tablet__content">
+                    {view === 'markets' ? (
+                      <>
+                        <MarketBar />
+                        <MatchList />
+                      </>
+                    ) : (
+                      <SavedCoupons embedded onBack={() => setView('markets')} />
+                    )}
+                  </div>
                 </div>
-              </div>
+              </FiltersProvider>
             </div>
           </div>
 

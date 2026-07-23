@@ -1,14 +1,13 @@
-import { useMemo, useState } from "react"
-import { useEvents } from "../hooks/useEvents"
-import { buildGroups, type MatchRowVM, type Cell } from "../utils/mapEvents"
+import { useState } from "react"
+import { useFilters } from "../context/FiltersContext"
+import type { MatchRowVM, Cell, SortMode } from "../utils/mapEvents"
 import { useCoupon } from "../context/CouponContext"
 import MatchDetail from "./MatchDetail"
 import "./MatchList.css"
 
 export default function MatchList() {
-  const { data, loading, error } = useEvents()
+  const { groups, loading, error, sort } = useFilters()
   const [openId, setOpenId] = useState<number | null>(null)
-  const groups = useMemo(() => (data ? buildGroups(data.data.e) : []), [data])
 
   if (loading) return <div className="ml-state">Yükleniyor…</div>
   if (error) return <div className="ml-state ml-state--err">Veri alınamadı ({error})</div>
@@ -21,7 +20,7 @@ export default function MatchList() {
           <div className="ml-daybar">{g.label}</div>
           {g.rows.map((r) => (
             <div key={r.id}>
-              <MatchRow r={r} open={openId === r.id} onToggle={() => setOpenId((o) => (o === r.id ? null : r.id))} />
+              <MatchRow r={r} sort={sort} open={openId === r.id} onToggle={() => setOpenId((o) => (o === r.id ? null : r.id))} />
               {openId === r.id && <MatchDetail id={r.id} />}
             </div>
           ))}
@@ -31,12 +30,14 @@ export default function MatchList() {
   )
 }
 
-function MatchRow({ r, open, onToggle }: { r: MatchRowVM; open: boolean; onToggle: () => void }) {
+function MatchRow({ r, sort, open, onToggle }: { r: MatchRowVM; sort: SortMode; open: boolean; onToggle: () => void }) {
+  const topLabel = sort === "league" ? r.dayShort : r.time
+  const subLabel = sort === "league" ? r.time : r.leagueCode
   return (
     <div className={`mr${open ? " is-open" : ""}`}>
       <div className="mr-time" onClick={onToggle}>
-        <span className="mr-time__h">{r.time}</span>
-        <span className="mr-time__d">{r.sub}</span>
+        <span className="mr-time__h">{topLabel}</span>
+        <span className="mr-time__d">{subLabel}</span>
       </div>
       <div className="mr-info" onClick={onToggle}>
         <span className="mr-name">{r.name}</span>
