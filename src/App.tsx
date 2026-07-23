@@ -12,12 +12,10 @@ import { CouponProvider } from './context/CouponContext'
 import SavedCoupons from './components/SavedCoupons'
 import CouponPanel from './components/CouponPanel'
 
-
 debugData<boolean>([{ action: 'setVisible', data: true }])
 
 export default function App() {
-
-  const [view, setView] = useState<"markets" | "savedCoupons">("markets")
+  const [view, setView] = useState<'markets' | 'savedCoupons'>('markets')
   const [visible, setVisible] = useState(false)
   useNuiEvent<boolean>('setVisible', setVisible)
 
@@ -37,29 +35,34 @@ export default function App() {
   return (
     <CouponProvider>
       <div className="tablet-stage">
-        <div className="tablet">
-          <div className="tablet__screen">
-            <LeftMenu
-              onOpenSavedCoupons={() => setView("savedCoupons")}
-              onOpenMarkets={() => setView("markets")}
-            />
-            <div className="tablet__main">
-              <TopBar />
-              <div className="tablet__content">
-                {view === "markets" ? (
-                  <>
-                    <MarketBar />
-                    <MatchList />
-                  </>
-                ) : (
-                  <SavedCoupons embedded onBack={() => setView("markets")} />
-                )}
+        <div className="tablet-wrap">
+          <div className="tablet">
+            <div className="tablet__screen">
+              <LeftMenu
+                onOpenSavedCoupons={() => setView('savedCoupons')}
+                onOpenMarkets={() => setView('markets')}
+              />
+
+              <div className="tablet__main">
+                <TopBar />
+
+                <div className="tablet__content">
+                  {view === 'markets' ? (
+                    <>
+                      <MarketBar />
+                      <MatchList />
+                    </>
+                  ) : (
+                    <SavedCoupons embedded onBack={() => setView('markets')} />
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <CouponPanel />
+          {/* CouponPanel: layout'u itmesin diye tablet-wrap içinde absolute konumlanacak */}
+          <CouponPanel />
+        </div>
       </div>
     </CouponProvider>
   )

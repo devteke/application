@@ -1,8 +1,12 @@
 .kp {
+  /* Tablet ile aynı hizaya getirmek için: tablet-wrap içinde absolute */
+  position: absolute;
+  left: calc(100% + 16px); /* tabletin sağında 16px boşluk */
+  top: 50%;
+
+  /* IMPORTANT: width sabit. Collapse/expand asla layout kaydırmaz */
   width: 310px;
-  flex: 0 0 auto;
-  align-self: flex-start;
-  max-height: 800px;               /* tablet yüksekliğiyle uyum */
+  max-height: 800px;
   display: flex;
   flex-direction: column;
 
@@ -14,6 +18,12 @@
   color: #e7e9ee;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+
+  /* Normal (expanded) pozisyon */
+  transform: translateY(-50%) translateX(0);
+
+  /* animasyon */
+  transition: transform 180ms ease;
 }
 
 /* Header */
@@ -48,7 +58,7 @@
   font-size: 13px;
 }
 
-/* Liste: kendi içinde scroll */
+/* Liste */
 .kp__list {
   flex: 1;
   min-height: 0;
@@ -64,7 +74,9 @@
 
 /* Bet satırı */
 .kp-bet {
-  display: flex; align-items: center; gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -76,7 +88,11 @@
   color: #e7e9ee;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.kp-bet__mkt { font-size: 12px; color: #9aa0ab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kp-bet__mkt {
+  font-size: 12px;
+  color: #9aa0ab;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .kp-bet__pick { color: #34d399; }
 
 .kp-bet__odd {
@@ -101,7 +117,9 @@
 
 /* Misli */
 .kp__misli {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: #0b0d11;
@@ -125,7 +143,8 @@
 /* Özet */
 .kp__sum { padding: 8px 12px; background: #0b0d11; }
 .kp-row {
-  display: flex; justify-content: space-between;
+  display: flex;
+  justify-content: space-between;
   padding: 5px 0;
   font-size: 12.5px;
   color: #9aa0ab;
@@ -182,7 +201,13 @@
 
 .kp__icon:disabled, .kp__play:disabled { opacity: 0.45; cursor: default; }
 
-/* Collapsed: içerikleri gizle, genişlik sabit */
+/* === Collapsed: width sabit kalır, panel sağa kayarak saklanır ===
+   310px panelin sadece ~64px'i görünsün diye 246px içeri itiyoruz.
+*/
+.kp.is-collapsed {
+  transform: translateY(-50%) translateX(246px);
+}
+
 .kp.is-collapsed .kp__list,
 .kp.is-collapsed .kp__misli,
 .kp.is-collapsed .kp__sum,
@@ -201,7 +226,7 @@
   display: none;
 }
 
-/* Scrollbar (CEF/Chrome) */
+/* Scrollbar */
 .kp__list::-webkit-scrollbar { width: 8px; }
 .kp__list::-webkit-scrollbar-track { background: transparent; }
 .kp__list::-webkit-scrollbar-thumb {
