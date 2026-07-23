@@ -36,7 +36,7 @@ export default function MatchDetail({ id }: { id: number }) {
   )
 }
 
-function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string } }) {
+function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string; startsAt: number } }) {
   const { isPicked, pick } = useCoupon()
   const many = m.o.length > MANY
   const stack = m.o.length > 3
