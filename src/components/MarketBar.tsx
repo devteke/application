@@ -1,16 +1,15 @@
-import { useState } from "react"
 import "./MarketBar.css"
-
-type SortState = { key: string; dir: "asc" | "desc" } | null
+import { useFilters } from "../context/FiltersContext"
+import type { OddSort, OddSortKey } from "../utils/mapEvents"
 
 function SortCell({
   id, label, col, sort, onSort,
 }: {
-  id: string
+  id: OddSortKey
   label: string
   col: number
-  sort: SortState
-  onSort: (key: string) => void
+  sort: OddSort | null
+  onSort: (key: OddSortKey) => void
 }) {
   const active = sort?.key === id
   const dir = active ? sort!.dir : null
@@ -30,15 +29,7 @@ function SortCell({
 }
 
 export default function MarketBar() {
-  const [q, setQ] = useState("")
-  const [sort, setSort] = useState<SortState>(null)
-
-  const onSort = (key: string) =>
-    setSort((s) =>
-      s?.key !== key ? { key, dir: "desc" }
-      : s.dir === "desc" ? { key, dir: "asc" }
-      : null,
-    )
+  const { search, setSearch, oddSort, toggleOddSort } = useFilters()
 
   return (
     <div className="marketbar">
@@ -47,10 +38,10 @@ export default function MarketBar() {
         <input
           className="mb-search__input"
           placeholder="Maç Ara"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        {q && <button className="mb-search__clear" onClick={() => setQ("")}>×</button>}
+        {search && <button className="mb-search__clear" onClick={() => setSearch("")}>×</button>}
       </div>
 
       {/* grup başlıkları (üst satır) */}
@@ -61,19 +52,19 @@ export default function MarketBar() {
       <div className="mb-title mb-title--tot" />
 
       {/* alt satır: sıralanabilir kolonlar */}
-      <SortCell id="ms1"  label="1"   col={3}  sort={sort} onSort={onSort} />
-      <SortCell id="msX"  label="X"   col={4}  sort={sort} onSort={onSort} />
-      <SortCell id="ms2"  label="2"   col={5}  sort={sort} onSort={onSort} />
-      <SortCell id="cs1x" label="1-X" col={6}  sort={sort} onSort={onSort} />
-      <SortCell id="cs12" label="1-2" col={7}  sort={sort} onSort={onSort} />
-      <SortCell id="csx2" label="X-2" col={8}  sort={sort} onSort={onSort} />
+      <SortCell id="ms1"  label="1"   col={3}  sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="msX"  label="X"   col={4}  sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="ms2"  label="2"   col={5}  sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="cs1x" label="1-X" col={6}  sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="cs12" label="1-2" col={7}  sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="csx2" label="X-2" col={8}  sort={oddSort} onSort={toggleOddSort} />
       <div className="mb-sub" style={{ gridColumn: 9 }} />{/* handikap rozet kolonu */}
-      <SortCell id="h1"   label="1"   col={10} sort={sort} onSort={onSort} />
-      <SortCell id="hX"   label="X"   col={11} sort={sort} onSort={onSort} />
-      <SortCell id="h2"   label="2"   col={12} sort={sort} onSort={onSort} />
-      <SortCell id="alt"  label="Alt" col={13} sort={sort} onSort={onSort} />
+      <SortCell id="h1"   label="1"   col={10} sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="hX"   label="X"   col={11} sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="h2"   label="2"   col={12} sort={oddSort} onSort={toggleOddSort} />
+      <SortCell id="alt"  label="Alt" col={13} sort={oddSort} onSort={toggleOddSort} />
       <div className="mb-sub" style={{ gridColumn: 14 }} />{/* alt/üst çizgi kolonu */}
-      <SortCell id="ust"  label="Üst" col={15} sort={sort} onSort={onSort} />
+      <SortCell id="ust"  label="Üst" col={15} sort={oddSort} onSort={toggleOddSort} />
       <div className="mb-sub" style={{ gridColumn: 16 }} />{/* toplam kolonu */}
     </div>
   )

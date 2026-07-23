@@ -75,6 +75,25 @@
 	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
+/* uzun etiketli buton satırı bozmasın */
+.tb-btn {
+	max-width: 180px;
+	white-space: nowrap;
+}
+
+.tb-btn__lbl {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tb-btn svg,
+.tb-btn__caret {
+	flex: 0 0 auto;
+	/* ikon/caret küçülmesin, sadece etiket kırpılsın */
+}
+
 .tb-btn:hover {
 	background: rgba(255, 255, 255, 0.07);
 	color: #e7e9ee;
@@ -122,9 +141,10 @@
 	top: calc(100% + 6px);
 	left: 0;
 	z-index: 50;
-	min-width: 200px;
+	min-width: 220px;
 	max-height: 320px;
 	overflow-y: auto;
+	overflow-x: hidden;
 	padding: 6px;
 	background: #14161b;
 	border: 1px solid rgba(255, 255, 255, 0.10);
@@ -181,30 +201,75 @@
 	background: transparent;
 }
 
-.tb-menu {
-	max-height: 320px;
+/* --- Lig arama dropdown'u --- */
+.tb-menu--search {
+	overflow: hidden;
+	/* dış kapsayıcı kaymaz; içteki liste kayar */
+	padding: 8px;
+}
+
+.tb-search {
+	padding: 0 0 8px;
+}
+
+.tb-search__input {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	height: 38px;
+	padding: 0 12px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.04);
+	color: #e7e9ee;
+	font: inherit;
+	font-size: 13px;
+	line-height: 38px;
+	border-radius: 8px;
+	outline: none;
+}
+
+.tb-search__input::placeholder {
+	color: #626775;
+}
+
+.tb-search__input:focus {
+	border-color: rgba(52, 211, 153, 0.5);
+	background: rgba(52, 211, 153, 0.06);
+}
+
+.tb-menu__scroll {
+	max-height: 260px;
 	overflow-y: auto;
-	overflow-x: hidden;
-	scrollbar-gutter: stable;
-	/* Firefox */
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+/* --- Scrollbar'lar (tablet__content ile aynı stil) --- */
+.tb-menu,
+.tb-menu__scroll {
 	scrollbar-width: thin;
+	/* Firefox */
 	scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
-/* WebKit */
-.tb-menu::-webkit-scrollbar {
+.tb-menu::-webkit-scrollbar,
+.tb-menu__scroll::-webkit-scrollbar {
 	width: 8px;
 }
 
-.tb-menu::-webkit-scrollbar-track {
+.tb-menu::-webkit-scrollbar-track,
+.tb-menu__scroll::-webkit-scrollbar-track {
 	background: transparent;
 }
 
-.tb-menu::-webkit-scrollbar-thumb {
+.tb-menu::-webkit-scrollbar-thumb,
+.tb-menu__scroll::-webkit-scrollbar-thumb {
 	background: rgba(255, 255, 255, 0.14);
 	border-radius: 4px;
 }
 
-.tb-menu::-webkit-scrollbar-thumb:hover {
+.tb-menu::-webkit-scrollbar-thumb:hover,
+.tb-menu__scroll::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.24);
 }

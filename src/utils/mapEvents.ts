@@ -28,6 +28,7 @@ export interface MatchRowVM {
   auUst: Cell
 }
 
+
 export interface DayGroup {
   key: string
   label: string
@@ -71,7 +72,6 @@ function istWeekdayLong(ms: number): string {
   const wd = IST_WEEKDAY_DTF.format(new Date(ms))
   return WEEKDAY_TR_LONG[wd] ?? wd
 }
-
 // Liste hücresi (lige göre): Bugün / Yarın / kısaltma (Pzt…)
 export function dayShortLabel(ms: number): string {
   const key = dayKey(istParts(ms))
@@ -80,7 +80,6 @@ export function dayShortLabel(ms: number): string {
   if (key === tomorrow) return "Yarın"
   return istWeekday(ms)
 }
-
 // Tarih dropdown'u: Bugün / Yarın / "23 Tem · Cumartesi"
 export function dayOptionLabel(ms: number): string {
   const p = istParts(ms)
@@ -174,6 +173,41 @@ function buildRow(ev: SbEvent, leagueMap?: LeagueMap): MatchRowVM {
 
 export type SortMode = "date" | "league"
 
+export type OddSortKey =
+  | "ms1" | "msX" | "ms2"
+  | "cs1x" | "cs12" | "csx2"
+  | "h1" | "hX" | "h2"
+  | "alt" | "ust"
+
+export interface OddSort {
+  key: OddSortKey
+  dir: "asc" | "desc"
+}
+
+function rowOdd(r: MatchRowVM, key: OddSortKey): number | null {
+  const map: Record<OddSortKey, Cell> = {
+    ms1: r.ms[0], msX: r.ms[1], ms2: r.ms[2],
+    cs1x: r.cs[0], cs12: r.cs[1], csx2: r.cs[2],
+    h1: r.hms[0], hX: r.hms[1], h2: r.hms[2],
+    alt: r.auAlt, ust: r.auUst,
+  }
+  const c = map[key]
+  if (!c || c.txt === DASH) return null
+  const n = parseFloat(c.txt)
+  return Number.isFinite(n) ? n : null
+}
+
+function sortRows(rows: MatchRowVM[], oddSort: OddSort): MatchRowVM[] {
+  const sign = oddSort.dir === "asc" ? 1 : -1
+  return [...rows].sort((a, b) => {
+    const av = rowOdd(a, oddSort.key)
+    const bv = rowOdd(b, oddSort.key)
+    if (av == null && bv == null) return 0
+    if (av == null) return 1   // oranı olmayanlar hep sonda
+    if (bv == null) return -1
+    return (av - bv) * sign
+  })
+}
 export interface LeagueInfo {
   league: string
   country: string
@@ -187,6 +221,7 @@ export interface EventFilters {
   dateSel: string | null   // dayKey (örn "2026-07-23")
   leagueSel: number | null // cp
   mbsSel: number[]         // çoklu; boşsa filtre yok
+  search?: string          // maç adı araması
 }
 
 export function eventDayKey(ms: number): string {
@@ -194,21 +229,32 @@ export function eventDayKey(ms: number): string {
 }
 
 export function filterEvents(events: SbEvent[], f: EventFilters): SbEvent[] {
+  const q = f.search?.trim().toLocaleLowerCase("tr") ?? ""
   return events.filter((ev) => {
     if (f.singleMatch && ev.mbs !== 1) return false
     if (f.dateSel && eventDayKey(ev.d) !== f.dateSel) return false
     if (f.leagueSel != null && ev.cp !== f.leagueSel) return false
     if (f.mbsSel.length > 0 && (ev.mbs == null || !f.mbsSel.includes(ev.mbs))) return false
+    if (q && !nameOf(ev).toLocaleLowerCase("tr").includes(q)) return false
     return true
   })
 }
 
 export function buildGroups(
   events: SbEvent[],
-  opts: { sort?: SortMode; leagueMap?: LeagueMap } = {},
+  opts: { sort?: SortMode; leagueMap?: LeagueMap; oddSort?: OddSort | null } = {},
 ): DayGroup[] {
-  if (opts.sort === "league") return buildLeagueGroups(events, opts.leagueMap)
+  const groups =
+    opts.sort === "league"
+      ? buildLeagueGroups(events, opts.leagueMap)
+      : buildDateGroups(events, opts.leagueMap)
+  if (opts.oddSort) {
+    for (const g of groups) g.rows = sortRows(g.rows, opts.oddSort)
+  }
+  return groups
+}
 
+function buildDateGroups(events: SbEvent[], leagueMap?: LeagueMap): DayGroup[] {
   const sorted = [...events].sort((a, b) => a.d - b.d)
   const groups: DayGroup[] = []
   const index = new Map<string, DayGroup>()
@@ -216,7 +262,7 @@ export function buildGroups(
     const { key, label } = dayInfo(ev.d)
     let g = index.get(key)
     if (!g) { g = { key, label, rows: [] }; index.set(key, g); groups.push(g) }
-    g.rows.push(buildRow(ev, opts.leagueMap))
+    g.rows.push(buildRow(ev, leagueMap))
   }
   return groups
 }

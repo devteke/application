@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
 import { useEvents } from "../hooks/useEvents"
 import { useLeagues } from "../hooks/useLeagues"
-import { buildGroups, dayInfo, filterEvents, type DayGroup, type SortMode } from "../utils/mapEvents"
+import { buildGroups, dayInfo, dayOptionLabel, filterEvents, type DayGroup, type OddSort, type OddSortKey, type SortMode } from "../utils/mapEvents"
 import type { SbEvent } from "../types/sportsbook"
 
 export interface DateOption { key: string; label: string }
@@ -28,6 +28,10 @@ interface FiltersCtx {
   leagueOptions: LeagueOption[]
   mbsOptions: number[]
   groups: DayGroup[]
+  search: string
+  setSearch: (s: string) => void
+  oddSort: OddSort | null
+  toggleOddSort: (key: OddSortKey) => void
 }
 
 const Ctx = createContext<FiltersCtx | null>(null)
@@ -35,7 +39,8 @@ const Ctx = createContext<FiltersCtx | null>(null)
 export function FiltersProvider({ children }: { children: ReactNode }) {
   const { data, loading, error } = useEvents()
   const { leagueMap } = useLeagues()
-
+  const [search, setSearch] = useState("")
+  const [oddSort, setOddSort] = useState<OddSort | null>(null)
   const [sort, setSort] = useState<SortMode>("date")
   const [singleMatch, setSingleMatch] = useState(false)
   const [dateSel, setDateSel] = useState<string | null>(null)
@@ -47,13 +52,15 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   const dateOptions = useMemo<DateOption[]>(() => {
     const m = new Map<string, string>()
     for (const ev of events) {
-      const { key, label } = dayInfo(ev.d)
-      if (!m.has(key)) m.set(key, label)
+      const { key } = dayInfo(ev.d)
+      if (!m.has(key)) m.set(key, dayOptionLabel(ev.d))
     }
     return [...m.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
       .map(([key, label]) => ({ key, label }))
   }, [events])
+
+
 
   const leagueOptions = useMemo<LeagueOption[]>(() => {
     const seen = new Map<number, LeagueOption & { order: number }>()
@@ -78,15 +85,22 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   }, [events])
 
   const groups = useMemo<DayGroup[]>(() => {
-    const filtered = filterEvents(events, { singleMatch, dateSel, leagueSel, mbsSel })
-    return buildGroups(filtered, { sort, leagueMap })
-  }, [events, singleMatch, dateSel, leagueSel, mbsSel, sort, leagueMap])
+    const filtered = filterEvents(events, { singleMatch, dateSel, leagueSel, mbsSel, search })
+    return buildGroups(filtered, { sort, leagueMap, oddSort })
+  }, [events, singleMatch, dateSel, leagueSel, mbsSel, search, sort, leagueMap, oddSort])
 
   const toggleMbs = (v: number) =>
     setMbsSel((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]))
+  const toggleOddSort = (key: OddSortKey) =>
+    setOddSort((s) =>
+      s?.key !== key ? { key, dir: "desc" }
+        : s.dir === "desc" ? { key, dir: "asc" }
+          : null,
+    )
 
   const clearAll = () => {
     setSort("date"); setSingleMatch(false); setDateSel(null); setLeagueSel(null); setMbsSel([])
+    setSearch(""); setOddSort(null)
   }
 
   const value: FiltersCtx = {
@@ -94,6 +108,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     setSort, toggleSingleMatch: () => setSingleMatch((v) => !v),
     setDateSel, setLeagueSel, toggleMbs, clearAll,
     loading, error, dateOptions, leagueOptions, mbsOptions, groups,
+    search, setSearch, oddSort, toggleOddSort,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

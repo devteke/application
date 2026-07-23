@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './TopBar.css'
+import './Topbar.css'
 import { useFilters } from '../context/FiltersContext'
 
 const svgProps = {
@@ -30,9 +30,14 @@ export default function TopBar() {
 	} = useFilters()
 
 	const [menu, setMenu] = useState<MenuKey | null>(null)
-	const close = () => setMenu(null)
-	const toggle = (k: MenuKey) => setMenu((m) => (m === k ? null : k))
+	const [leagueQ, setLeagueQ] = useState('')
+	const close = () => { setMenu(null); setLeagueQ('') }
+	const toggle = (k: MenuKey) => { setMenu((m) => (m === k ? null : k)); setLeagueQ('') }
 
+	const q = leagueQ.trim().toLocaleLowerCase('tr')
+	const filteredLeagues = q
+		? leagueOptions.filter((o) => o.label.toLocaleLowerCase('tr').includes(q))
+		: leagueOptions
 	const dateLabel = dateSel ? (dateOptions.find((d) => d.key === dateSel)?.label ?? 'Tarih') : 'Tarih seç'
 	const leagueLabel = leagueSel != null ? (leagueOptions.find((l) => l.cp === leagueSel)?.label ?? 'Lig') : 'Lig seç'
 	const mbsLabel = mbsSel.length ? `MBS: ${[...mbsSel].sort((a, b) => a - b).join(', ')}` : 'MBS seç'
@@ -54,7 +59,7 @@ export default function TopBar() {
 			{/* Tarih */}
 			<div className="tb-dd">
 				<button className={'tb-btn' + (dateSel ? ' is-selected' : '')} onClick={() => toggle('date')}>
-					<IconCalendar />{dateLabel}<IconCaret />
+					<IconCalendar /><span className="tb-btn__lbl">{dateLabel}</span><IconCaret />
 				</button>
 				{menu === 'date' && (
 					<div className="tb-menu">
@@ -75,20 +80,32 @@ export default function TopBar() {
 			{/* Lig */}
 			<div className="tb-dd">
 				<button className={'tb-btn' + (leagueSel != null ? ' is-selected' : '')} onClick={() => toggle('league')}>
-					<IconFlag />{leagueLabel}<IconCaret />
+					<IconFlag /><span className="tb-btn__lbl">{leagueLabel}</span><IconCaret />
 				</button>
 				{menu === 'league' && (
-					<div className="tb-menu">
-						{leagueOptions.length === 0 && <div className="tb-menu__empty">Seçenek yok</div>}
-						{leagueOptions.map((o) => (
-							<button
-								key={o.cp}
-								className={'tb-menu__item' + (leagueSel === o.cp ? ' is-active' : '')}
-								onClick={() => { setLeagueSel(leagueSel === o.cp ? null : o.cp); close() }}
-							>
-								{o.label}
-							</button>
-						))}
+					<div className="tb-menu tb-menu--search">
+						<div className="tb-search">
+							<input
+								className="tb-search__input"
+								type="text"
+								placeholder="Lig ara…"
+								value={leagueQ}
+								autoFocus
+								onChange={(e) => setLeagueQ(e.target.value)}
+							/>
+						</div>
+						<div className="tb-menu__scroll">
+							{filteredLeagues.length === 0 && <div className="tb-menu__empty">Sonuç yok</div>}
+							{filteredLeagues.map((o) => (
+								<button
+									key={o.cp}
+									className={'tb-menu__item' + (leagueSel === o.cp ? ' is-active' : '')}
+									onClick={() => { setLeagueSel(leagueSel === o.cp ? null : o.cp); close() }}
+								>
+									{o.label}
+								</button>
+							))}
+						</div>
 					</div>
 				)}
 			</div>
@@ -96,7 +113,7 @@ export default function TopBar() {
 			{/* MBS (çoklu) */}
 			<div className="tb-dd">
 				<button className={'tb-btn' + (mbsSel.length ? ' is-selected' : '')} onClick={() => toggle('mbs')}>
-					<IconLayers />{mbsLabel}<IconCaret />
+					<IconLayers /><span className="tb-btn__lbl">{mbsLabel}</span><IconCaret />
 				</button>
 				{menu === 'mbs' && (
 					<div className="tb-menu">

@@ -5,6 +5,7 @@ import "./MatchDetail.css"
 import { useCoupon } from "../context/CouponContext"
 
 const ocLabel = (n: string) => (n === "0" ? "X" : n)
+const MANY = 8 // bu sayıdan fazla seçenekli market = yoğun/geniş
 
 export default function MatchDetail({ id }: { id: number }) {
   const { detail, loading, error } = useEventDetail(id)
@@ -16,29 +17,32 @@ export default function MatchDetail({ id }: { id: number }) {
   const groups = groupDetailMarkets(detail.m ?? [])
   if (!groups.length) return <div className="md md--state">Bu maç için ek market yok.</div>
 
-  // maç bilgisini hazırla
   const ev = { id: detail.i, name: `${detail.ph} - ${detail.pa}` }
 
   return (
     <div className="md">
-      {groups.map((g) => (
-        <section className="md-card" key={g.key}>
-          <header className="md-card__head">{g.label}</header>
-          <div className="md-card__body">
-            {g.markets.map((m) => <MarketRow key={m.i} m={m} ev={ev} />)}
-          </div>
-        </section>
-      ))}
+      {groups.map((g) => {
+        const wide = g.markets.some((m) => m.o.length > MANY)
+        return (
+          <section className={`md-card${wide ? " md-card--wide" : ""}`} key={g.key}>
+            <header className="md-card__head">{g.label}</header>
+            <div className="md-card__body">
+              {g.markets.map((m) => <MarketRow key={m.i} m={m} ev={ev} />)}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
 
 function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string } }) {
   const { isPicked, pick } = useCoupon()
+  const many = m.o.length > MANY
   const stack = m.o.length > 3
 
   return (
-    <div className={`md-mkt${stack ? " md-mkt--stack" : ""}`}>
+    <div className={`md-mkt${stack ? " md-mkt--stack" : ""}${many ? " md-mkt--grid" : ""}`}>
       <div className="md-mkt__label">
         <span className="md-mkt__min">{m.min}</span>
         <span className="md-mkt__name">{m.n}</span>
