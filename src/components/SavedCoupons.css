@@ -67,19 +67,18 @@
   font-size: 12.5px;
 }
 
-/* === LIST GRID === */
+/* === LIST: masonry benzeri, BOŞLUKSUZ paketleme ===
+   grid yerine multi-column => kartlar satır hizasına takılmaz,
+   bir kart uzayınca yanındaki kolonda boş "gap" oluşmaz.
+   (Scroll dıştaki .tablet__pageBody'de; burası auto-height kalmalı) */
 .sk__list{
   padding: 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-
-  /* FIX: bir kart büyüyünce yanındakini "stretch" etme */
-  align-items: start;
+  column-count: 2;
+  column-gap: 10px;
 }
 
 @media (max-width: 1100px){
-  .sk__list{ grid-template-columns: 1fr; }
+  .sk__list{ column-count: 1; }
 }
 
 /* Kupon kartı */
@@ -89,8 +88,11 @@
   border-radius: 12px;
   overflow: hidden;
 
-  /* FIX: grid item kendi boyunda kalsın */
-  align-self: start;
+  /* FIX: kart iki kolona bölünmesin, kolon içinde alt alta paketlensin */
+  display: block;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin: 0 0 10px;
 }
 
 .skc__head{

@@ -74,14 +74,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
-/* Tablet + coupon'u birlikte taşıyan wrapper */
+/* Tablet + coupon: İKİ KOLON yan yana, birlikte ortalı.
+   flex-start => ikisi de üstten başlar; tablet, kupon içeriğiyle ESNEMEZ. */
 .tablet-wrap{
-  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start;
   justify-content: center;
+  gap: 16px;
 }
 
 /* Tablet içi sayfa helper'ları (SavedCoupons embedded) */

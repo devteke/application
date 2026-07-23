@@ -56,8 +56,10 @@ export default function SavedCoupons({
           <span className="sk__badge">{saved.length}</span>
         </header>
 
-        <div className="tablet__pageBody sk__list">
-          {list}
+        <div className="tablet__pageBody">
+          <div className="sk__list">
+            {list}
+          </div>
         </div>
       </div>
     )

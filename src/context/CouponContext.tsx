@@ -40,8 +40,9 @@ export function CouponProvider({ children }: { children: ReactNode }) {
       )
       // aynı seçime tekrar tıklama => kaldır
       if (same) return prev.filter((b) => b.eventId !== bet.eventId)
-      // maç başına tek bahis => o maçın eski bahsini at, yenisini ekle
-      return [...prev.filter((b) => b.eventId !== bet.eventId), bet]
+      // maç başına tek bahis => o maçın eski bahsini at,
+      // yeni/güncellenen bahsi EN ÜSTE ekle
+      return [bet, ...prev.filter((b) => b.eventId !== bet.eventId)]
     })
   }
 
