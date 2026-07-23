@@ -1,36 +1,100 @@
-import { useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { useFilters } from "../context/FiltersContext"
 import type { MatchRowVM, Cell, SortMode } from "../utils/mapEvents"
 import { useCoupon } from "../context/CouponContext"
 import MatchDetail from "./MatchDetail"
 import "./MatchList.css"
 
+type ListItem =
+  | { kind: "header"; key: string; label: string }
+  | { kind: "row"; key: string; r: MatchRowVM }
+
 export default function MatchList() {
   const { groups, loading, error, sort } = useFilters()
   const [openId, setOpenId] = useState<number | null>(null)
 
+  // Grupları tek düz listeye çevir (başlık + satırlar)
+  const items = useMemo<ListItem[]>(() => {
+    const out: ListItem[] = []
+    for (const g of groups) {
+      out.push({ kind: "header", key: `h:${g.key}`, label: g.label })
+      for (const r of g.rows) out.push({ kind: "row", key: `r:${g.key}:${r.id}`, r })
+    }
+    return out
+  }, [groups])
+
+  // Scroll konteyneri: .tablet__content
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = listRef.current
+    const sc = (el?.closest(".tablet__content") as HTMLElement) ?? null
+    setScrollEl(sc)
+    if (el) setScrollMargin(el.offsetTop) // MarketBar'ın kapladığı üst boşluk
+  }, [])
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollEl,
+    estimateSize: (i) => (items[i].kind === "header" ? 28 : 44),
+    overscan: 10,
+    scrollMargin,
+    getItemKey: (i) => items[i].key,
+  })
+
   if (loading) return <div className="ml-state">Yükleniyor…</div>
   if (error) return <div className="ml-state ml-state--err">Veri alınamadı ({error})</div>
-  if (!groups.length) return <div className="ml-state">Maç bulunamadı.</div>
+  if (!items.length) return <div className="ml-state">Maç bulunamadı.</div>
+
+  const vItems = virtualizer.getVirtualItems()
 
   return (
-    <div className="ml">
-      {groups.map((g) => (
-        <div key={g.key}>
-          <div className="ml-daybar">{g.label}</div>
-          {g.rows.map((r) => (
-            <div key={r.id}>
-              <MatchRow r={r} sort={sort} open={openId === r.id} onToggle={() => setOpenId((o) => (o === r.id ? null : r.id))} />
-              {openId === r.id && <MatchDetail id={r.id} />}
-            </div>
-          ))}
-        </div>
-      ))}
+    <div
+      ref={listRef}
+      className="ml"
+      style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+    >
+      {vItems.map((vi) => {
+        const item = items[vi.index]
+        return (
+          <div
+            key={item.key}
+            data-index={vi.index}
+            ref={virtualizer.measureElement}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${vi.start - scrollMargin}px)`,
+            }}
+          >
+            {item.kind === "header" ? (
+              <div className="ml-daybar">{item.label}</div>
+            ) : (
+              <>
+                <MatchRow
+                  r={item.r}
+                  sort={sort}
+                  open={openId === item.r.id}
+                  onToggle={() => setOpenId((o) => (o === item.r.id ? null : item.r.id))}
+                />
+                {openId === item.r.id && <MatchDetail id={item.r.id} />}
+              </>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-function MatchRow({ r, sort, open, onToggle }: { r: MatchRowVM; sort: SortMode; open: boolean; onToggle: () => void }) {
+function MatchRow({
+  r, sort, open, onToggle,
+}: { r: MatchRowVM; sort: SortMode; open: boolean; onToggle: () => void }) {
   const topLabel = sort === "league" ? r.dayShort : r.time
   const subLabel = sort === "league" ? r.time : r.leagueCode
   return (

@@ -51,20 +51,39 @@ const hcapLabel = (ov: unknown) => {
   return n > 0 ? `+${s}` : s
 }
 
+// Modül seviyesinde TEK sefer kurulan formatter'lar (satır başına kurulum yok)
+const IST_DTF = new Intl.DateTimeFormat("tr-TR", {
+  timeZone: TZ, year: "numeric", month: "numeric", day: "numeric",
+  hour: "2-digit", minute: "2-digit", hour12: false,
+})
+const IST_WEEKDAY_DTF = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" })
+
 function istParts(ms: number) {
-  const parts = new Intl.DateTimeFormat("tr-TR", {
-    timeZone: TZ, year: "numeric", month: "numeric", day: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(new Date(ms))
+  const parts = IST_DTF.formatToParts(new Date(ms))
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
   return { y: +g("year"), mo: +g("month"), da: +g("day"), hh: g("hour"), mm: g("minute") }
 }
+
 const WEEKDAY_TR: Record<string, string> = {
   Sun: "Paz", Mon: "Pzt", Tue: "Sal", Wed: "Çar", Thu: "Per", Fri: "Cum", Sat: "Cmt",
 }
 function istWeekday(ms: number): string {
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(new Date(ms))
+  const wd = IST_WEEKDAY_DTF.format(new Date(ms))
   return WEEKDAY_TR[wd] ?? wd
+}
+
+// Bugün/yarın anahtarlarını günde 1 kez hesapla (her event'te tekrar etme)
+let _ttCache: { day: number; today: string; tomorrow: string } | null = null
+function getTT() {
+  const dayNo = Math.floor(Date.now() / 86400000)
+  if (!_ttCache || _ttCache.day !== dayNo) {
+    _ttCache = {
+      day: dayNo,
+      today: dayKey(istParts(Date.now())),
+      tomorrow: dayKey(istParts(Date.now() + 86400000)),
+    }
+  }
+  return _ttCache
 }
 
 const dayKey = (p: { y: number; mo: number; da: number }) =>
@@ -73,8 +92,7 @@ const dayKey = (p: { y: number; mo: number; da: number }) =>
 export function dayInfo(ms: number) {
   const p = istParts(ms)
   const key = dayKey(p)
-  const today = dayKey(istParts(Date.now()))
-  const tomorrow = dayKey(istParts(Date.now() + 86400000))
+  const { today, tomorrow } = getTT()
   const label = key === today ? "BUGÜN" : key === tomorrow ? "YARIN" : `${p.da} ${MONTHS[p.mo - 1]}`
   return { key, label }
 }
