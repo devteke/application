@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useFilters } from "../context/FiltersContext"
 import type { MatchRowVM, Cell, SortMode } from "../utils/mapEvents"
@@ -25,15 +25,21 @@ export default function MatchList() {
   }, [groups])
 
   // Scroll konteyneri: .tablet__content
-  const listRef = useRef<HTMLDivElement | null>(null)
+  // Scroll konteyneri (.tablet__content) — callback ref ile .ml mount olunca yakalanır
+  const listElRef = useRef<HTMLDivElement | null>(null)
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
 
-  useLayoutEffect(() => {
-    const el = listRef.current
-    const sc = (el?.closest(".tablet__content") as HTMLElement) ?? null
+  const setListNode = useCallback((node: HTMLDivElement | null) => {
+    listElRef.current = node
+    if (!node) return
+    const sc = node.closest(".tablet__content") as HTMLElement | null
     setScrollEl(sc)
-    if (el) setScrollMargin(el.offsetTop) // MarketBar'ın kapladığı üst boşluk
+    if (sc) {
+      const margin =
+        node.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop
+      setScrollMargin(margin)
+    }
   }, [])
 
   const virtualizer = useVirtualizer({
@@ -53,7 +59,7 @@ export default function MatchList() {
 
   return (
     <div
-      ref={listRef}
+      ref={setListNode}
       className="ml"
       style={{ height: virtualizer.getTotalSize(), position: "relative" }}
     >
