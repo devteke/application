@@ -17,7 +17,7 @@ export default function MatchDetail({ id }: { id: number }) {
   const groups = groupDetailMarkets(detail.m ?? [])
   if (!groups.length) return <div className="md md--state">Bu maç için ek market yok.</div>
 
-  const ev = { id: detail.i, name: `${detail.ph} - ${detail.pa}` }
+  const ev = { id: detail.i, name: `${detail.ph} - ${detail.pa}`, startsAt: detail.d }
 
   return (
     <div className="md">
@@ -66,6 +66,7 @@ function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string 
                   on: o.on,
                   pick: ocLabel(o.n),
                   odd: o.od,
+                  startsAt: ev.startsAt,
                 })
               }
             >

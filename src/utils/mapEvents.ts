@@ -1,5 +1,6 @@
 import type { SbEvent, SbMarket } from "../types/sportsbook"
 import type { Bet } from "../types/coupon"
+import { BETTING } from "../config/betting"
 
 export const DASH = "-"
 const TZ = "Europe/Istanbul"
@@ -51,7 +52,9 @@ const hcapLabel = (ov: unknown) => {
   const s = String(ov).replace(".", ",")
   return n > 0 ? `+${s}` : s
 }
-
+export const cutoffAt = (ev: SbEvent, leadMs = BETTING.cutoffLeadMs) => ev.d - leadMs
+export const isBettingClosed = (ev: SbEvent, now = Date.now(), leadMs = BETTING.cutoffLeadMs) =>
+  cutoffAt(ev, leadMs) <= now
 // Modül seviyesinde TEK sefer kurulan formatter'lar (satır başına kurulum yok)
 const IST_DTF = new Intl.DateTimeFormat("tr-TR", {
   timeZone: TZ, year: "numeric", month: "numeric", day: "numeric",
@@ -127,7 +130,7 @@ function cellFor(ev: SbEvent, mkt: SbMarket | undefined, on: number, pick: strin
   if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
   return {
     txt: o.od.toFixed(2),
-    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on, pick, odd: o.od },
+    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on, pick, odd: o.od, startsAt: ev.d },
   }
 }
 
@@ -137,7 +140,7 @@ function altUstCell(ev: SbEvent, mkt: SbMarket | undefined, which: "Alt" | "Üst
   if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
   return {
     txt: o.od.toFixed(2),
-    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on: o.on, pick: which, odd: o.od },
+    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on: o.on, pick: which, odd: o.od, startsAt: ev.d },
   }
 }
 
@@ -222,6 +225,8 @@ export interface EventFilters {
   leagueSel: number | null // cp
   mbsSel: number[]         // çoklu; boşsa filtre yok
   search?: string          // maç adı araması
+  now?: number      // kesim kontrolü (verilmezse Date.now())
+  leadMs?: number   // kickoff'tan kaç ms önce kapansın
 }
 
 export function eventDayKey(ms: number): string {
@@ -230,7 +235,10 @@ export function eventDayKey(ms: number): string {
 
 export function filterEvents(events: SbEvent[], f: EventFilters): SbEvent[] {
   const q = f.search?.trim().toLocaleLowerCase("tr") ?? ""
+  const now = f.now ?? Date.now()
+  const lead = f.leadMs ?? BETTING.cutoffLeadMs
   return events.filter((ev) => {
+    if (isBettingClosed(ev, now, lead)) return false   // saati gelen listeden düşer
     if (f.singleMatch && ev.mbs !== 1) return false
     if (f.dateSel && eventDayKey(ev.d) !== f.dateSel) return false
     if (f.leagueSel != null && ev.cp !== f.leagueSel) return false

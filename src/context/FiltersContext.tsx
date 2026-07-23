@@ -3,7 +3,7 @@ import { useEvents } from "../hooks/useEvents"
 import { useLeagues } from "../hooks/useLeagues"
 import { buildGroups, dayInfo, dayOptionLabel, filterEvents, type DayGroup, type OddSort, type OddSortKey, type SortMode } from "../utils/mapEvents"
 import type { SbEvent } from "../types/sportsbook"
-
+import { useCutoffTick } from "../hooks/useCutoffTick"
 export interface DateOption { key: string; label: string }
 export interface LeagueOption { cp: number; label: string }
 
@@ -48,7 +48,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   const [mbsSel, setMbsSel] = useState<number[]>([])
 
   const events = useMemo<SbEvent[]>(() => data?.data.e ?? [], [data])
-
+  const startTimes = useMemo(() => events.map((e) => e.d), [events])
+  const cutoffTick = useCutoffTick(startTimes)   // kesim anında bump'lar
   const dateOptions = useMemo<DateOption[]>(() => {
     const m = new Map<string, string>()
     for (const ev of events) {
@@ -85,9 +86,9 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   }, [events])
 
   const groups = useMemo<DayGroup[]>(() => {
-    const filtered = filterEvents(events, { singleMatch, dateSel, leagueSel, mbsSel, search })
+    const filtered = filterEvents(events, { singleMatch, dateSel, leagueSel, mbsSel, search, now: Date.now() })
     return buildGroups(filtered, { sort, leagueMap, oddSort })
-  }, [events, singleMatch, dateSel, leagueSel, mbsSel, search, sort, leagueMap, oddSort])
+  }, [events, singleMatch, dateSel, leagueSel, mbsSel, search, sort, leagueMap, oddSort, cutoffTick])
 
   const toggleMbs = (v: number) =>
     setMbsSel((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]))

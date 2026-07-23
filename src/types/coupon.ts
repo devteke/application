@@ -6,6 +6,7 @@ export interface Bet {
   on: number
   pick: string   // gösterilecek seçim etiketi: "1","X","2","1-X","Alt"...
   odd: number
+  startsAt: number   // event başlama zamanı (ev.d, epoch ms) — kesim için
 }
 
 export interface SavedCoupon {

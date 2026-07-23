@@ -2,12 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react"
 import type { Bet, SavedCoupon } from "../types/coupon"
-
+import { useCutoffTick } from "../hooks/useCutoffTick"
+import { BETTING } from "../config/betting"
 const UNIT = 1 // 1 misli = 1 TL
 
 interface CouponCtx {
@@ -32,7 +34,16 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Bet[]>([])
   const [misli, setMisliState] = useState(1)
   const [saved, setSaved] = useState<SavedCoupon[]>([])
+  const activeStarts = useMemo(() => active.map((b) => b.startsAt), [active])
+  const couponTick = useCutoffTick(activeStarts)
 
+  useEffect(() => {
+    const now = Date.now()
+    setActive((prev) => {
+      const next = prev.filter((b) => b.startsAt - BETTING.cutoffLeadMs > now)
+      return next.length === prev.length ? prev : next   // değişiklik yoksa render tetikleme
+    })
+  }, [couponTick])
   const totalOdd = useMemo(
     () => active.reduce((acc, b) => acc * b.odd, 1),
     [active],
@@ -53,6 +64,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   )
 
   const pick = useCallback((bet: Bet) => {
+    if (bet.startsAt - BETTING.cutoffLeadMs <= Date.now()) return  // süresi geçmişse ekleme
     setActive((prev) => {
       const same = prev.find(
         (b) =>
