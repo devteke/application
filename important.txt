@@ -1,0 +1,296 @@
+FiveM tarafında server-side event güvenliği ve exploit koruması, esasen tek bir prensibe dayanır: istemciye asla güvenme (never trust the client). Aşağıda katmanlı bir yaklaşımla nasıl kurgulanabileceğini anlatıyorum.
+1. Temel Prensip: Sunucu Otoritesi (Server Authority)
+İstemci sadece "niyet" bildirir; kararı ve doğrulamayı her zaman sunucu verir.
+İstemci "para ekle", "eşya ver", "koordinatımı değiştir" gibi bir işlemin sonucunu göndermemeli; sadece "şu aksiyonu yapmak istiyorum" demeli.
+Sunucu; oyuncunun buna hakkı olup olmadığını, mesafeyi, cooldown'ı, envanteri vb. kendi verisiyle kontrol edip işlemi kendisi uygulamalı.
+-- KÖTÜ: istemci ne kadar para ekleneceğini söylüyor
+RegisterNetEvent('bank:deposit')
+AddEventHandler('bank:deposit', function(amount)
+    AddMoney(source, amount) -- exploit'e açık
+end)
+
+-- İYİ: sunucu doğrular ve karar verir
+RegisterNetEvent('bank:deposit')
+AddEventHandler('bank:deposit', function(amount)
+    local src = source
+    -- tip + aralık doğrulaması
+    if type(amount) ~= 'number' or amount <= 0 or amount ~= math.floor(amount) then return end
+    local player = GetPlayer(src)
+    if not player then return end
+    if player.cash < amount then return end -- sunucu tarafı gerçek veri
+    player.removeCash(amount)
+    player.addBank(amount)
+end)
+​
+2. Event Güvenliği
+a) source spoofing'e dikkat
+source değişkeni event handler'ın en başında yerel bir değişkene alınmalı (local src = source), çünkü source await/callback sonrası değişebilir ya da sıfırlanabilir.
+b) Girdi doğrulama (input validation)
+Her event parametresi için:
+Tip kontrolü (type(x) == 'number')
+Aralık/sınır kontrolü (negatif, aşırı büyük, ondalık, NaN)
+Whitelist kontrolü (ör. item adı gerçekten var mı, kayıtlı listede mi)
+c) Rate limiting / cooldown
+Bir oyuncunun aynı eventi saniyede yüzlerce kez tetiklemesini engelleyin (event flooding = hem exploit hem DoS vektörü).
+local cooldowns = {}
+local function onCooldown(src, key, ms)
+    local now = GetGameTimer()
+    cooldowns[src] = cooldowns[src] or {}
+    if cooldowns[src][key] and now < cooldowns[src][key] then return true end
+    cooldowns[src][key] = now + ms
+    return false
+end
+​
+d) Mesafe / durum doğrulaması
+"Aracı kilitle", "kapıyı aç", "eşya al" gibi olaylarda oyuncunun ilgili objeye/koordinata gerçekten yakın olup olmadığını sunucuda GetEntityCoords ile kontrol edin.
+3. Exploit / Cheat Koruması
+a) Event tetikleme kısıtı
+Anti-cheat açısından kritik olan: bir oyuncunun başkası adına veya var olmayan eventleri tetiklemesi. Client'tan gelen tüm TriggerServerEvent çağrıları düşman kabul edilmeli.
+Sunucudan client'a giden hassas mantık (fiyat, drop tablosu vb.) mümkün olduğunca client'a hiç gönderilmemeli.
+b) Explosion / entity oluşturma kontrolü
+explosionEvent, giveWeaponEvent, weaponDamageEvent gibi yerleşik network eventlerini CancelEvent() ile filtreleyin.
+AddEventHandler('explosionEvent', function(sender, ev)
+    -- şüpheli patlama tiplerini engelle
+    CancelEvent()
+end)
+​
+c) OneSync / Entity Lockdown
+onesync açıkken sv_entityLockdown politikasını strict (veya en az relaxed) yapın. Böylece client'ların keyfî entity (araç, ped, obje) spawn etmesi engellenir; entity oluşturma sunucu üzerinden yapılır.
+set onesync on
+set sv_entityLockdown strict
+​
+d) Resource / kod bütünlüğü
+Kritik server dosyalarını client'a asla açmayın (server_script vs client_script ayrımına dikkat).
+Client script'lere hassas sabitler (webhook, DB bilgisi, admin listesi) koymayın — her client bunları okuyabilir.
+4. Kalıcılık ve Yetki
+Admin/yetki kontrolü her zaman sunucuda, identifier (license, discord, steam) üzerinden yapılmalı; client'tan gelen "ben adminim" bilgisine güvenilmez. Tek bir stabil identifier'a değil, tercihen license/license2 gibi kolay taklit edilemeyen kimliklere dayanın.
+Veritabanı yazımları yalnızca doğrulanmış server işlemlerinden sonra yapılmalı.
+5. Ek Katmanlar
+Logging & webhook alarmları: anormal davranış (imkânsız miktarlar, hızlı tekrar, geçersiz parametreler) tespit edilince Discord webhook'a log atıp oyuncuyu işaretleyin/atın (DropPlayer).
+txAdmin + kill/ban entegrasyonu: tekrarlayan ihlallerde otomatik ban.
+Anti-cheat çözümleri: FiveM'in yerleşik korumaları + community/ticari anti-cheat'ler tamamlayıcı olarak kullanılabilir, ancak bunlar sunucu-otoritesi mimarisinin yerine geçmez, üzerine eklenir.
+Özet zihniyet
+Katman
+Soru
+Otorite
+Kararı sunucu mu veriyor?
+Doğrulama
+Girdinin tipi/aralığı/whitelist'i kontrol edildi mi?
+Rate limit
+Bu event spam'lenebilir mi?
+Durum
+Oyuncu bunu yapabilecek konumda/durumda mı?
+Lockdown
+Client keyfî entity/event üretebiliyor mu?
+Log/ban
+İhlal tespit edilip yanıt veriliyor mu?
+İstersen belirli bir framework (ESX / QBCore / QBox / ox_lib) için bu prensiplerin nasıl uygulandığını, ya da ox_lib callback'leri gibi daha güvenli event/callback yapılarının nasıl kurulacağını da örnekle gösterebilirim.
+NUI ve Veri Akışı: Client-NUI arasındaki asenkron iletişimi ve veri güvenliğini nasıl sağlıyorsunuz?
+July 21 at 3:25 PM
+Thought
+FiveM'de NUI (NUI = tarayıcı tabanlı arayüz katmanı) ile client script arasındaki iletişim, iki yönlü ve doğası gereği asenkrondur. Sağlam bir kurgu, hem iletişim protokolünü hem de güven sınırlarını net tanımlamayı gerektirir.
+1. İki Yönlü İletişimin Temeli
+İki ayrı kanal vardır:
+a) Client → NUI: SendNUIMessage
+Lua/client tarafından NUI'ye (JavaScript) veri gönderir.
+SendNUIMessage({
+    action = 'openMenu',
+    payload = { money = 5000, items = {...} }
+})
+​
+// NUI (JS) tarafı
+window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (data.action === 'openMenu') {
+        renderMenu(data.payload);
+    }
+});
+​
+b) NUI → Client: fetch (NUI callback)
+NUI, https://<resource_name>/<callback> adresine POST atar; client RegisterNUICallback ile yakalar.
+// NUI (JS)
+async function buyItem(itemId) {
+    const resp = await fetch(`https://${GetParentResourceName()}/buyItem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ itemId })
+    });
+    return await resp.json();
+}
+​
+RegisterNUICallback('buyItem', function(data, cb)
+    -- işle...
+    cb({ ok = true }) -- cevabı NUI'ye döndür
+end)
+​
+2. Asenkron İletişimi Yönetmek
+a) Callback = Promise
+NUI callback'i fetch üzerinden geldiği için doğal olarak bir Promise döndürür. cb(...) çağrısı bu Promise'i çözer. Callback'i her zaman çağırın (hata durumunda bile), yoksa NUI tarafındaki await sonsuza kadar asılı kalır.
+RegisterNUICallback('buyItem', function(data, cb)
+    local ok, result = pcall(function() return processPurchase(data) end)
+    if not ok then
+        cb({ ok = false, error = 'internal' }) -- yine de yanıt ver
+        return
+    end
+    cb(result)
+end)
+​
+b) NUI Focus yönetimi
+SetNuiFocus(hasFocus, hasCursor) mutlaka menü açılış/kapanışıyla senkron yönetilmeli. Menü kapanırken focus geri alınmazsa oyuncu kontrolü kilitlenir. Kapanış callback'inde focus'u temizleyin:
+RegisterNUICallback('closeMenu', function(_, cb)
+    SetNuiFocus(false, false)
+    cb('ok')
+end)
+​
+c) State senkronizasyonu
+NUI'nin kendi local state'i, client'ın gerçeğinden sapabilir. Menü açılırken client güncel snapshot'ı SendNUIMessage ile göndermeli; NUI kendi başına "doğru" varsaymamalı.
+3. Veri Güvenliği — Kritik Nokta
+Buradaki en önemli gerçek: NUI bir tarayıcıdır (CEF). Oyuncu DevTools benzeri yöntemlerle NUI JavaScript'ini okuyabilir/manipüle edebilir. Dolayısıyla:
+a) NUI = güvenilmeyen istemci
+NUI'den client'a, oradan da sunucuya giden hiçbir veriye güvenilmez. Server-side event güvenliğindeki aynı prensip burada da geçerli: her callback verisi doğrulanmalı.
+NUI'den gelen itemId, amount, price gibi değerler asla "olduğu gibi" işlenmemeli.
+Kritik karar (fiyat, stok, yetki) client + server'da doğrulanmalı; NUI sadece "istek" iletir.
+RegisterNUICallback('buyItem', function(data, cb)
+    -- NUI'den gelen fiyata GÜVENME
+    if type(data.itemId) ~= 'string' then cb({ok=false}) return end
+    -- gerçek fiyatı server/config'ten al, NUI'nin gönderdiğini kullanma
+    TriggerServerEvent('shop:buy', data.itemId) -- server yeniden doğrular
+    cb({ ok = true })
+end)
+​
+b) Hassas veri NUI'ye gönderilmez
+Webhook URL'leri, admin listeleri, DB bilgileri, tüm oyuncuların verileri → NUI'ye asla yollanmamalı. NUI'ye yalnızca o oyuncunun görmesi gereken minimum veri gitmeli (need-to-know).
+Menüde "tüm item fiyatları" gösterilse bile, satın alma anında fiyat server'da tekrar doğrulanmalı.
+c) GetParentResourceName() kullanımı
+fetch URL'lerinde resource adını hardcode etmek yerine GetParentResourceName() kullanın; hem taşınabilirlik hem de yanlış resource'a istek gitmesini önleme açısından daha temiz.
+d) Girdi doğrulama (NUI callback'lerinde)
+Her callback için: tip kontrolü, aralık kontrolü, whitelist. NUI manipüle edilmiş olabilir; action ve payload alanlarının şemasını doğrulayın.
+e) XSS / injection
+NUI HTML'inde oyuncu kaynaklı metinleri (isim, chat, plaka vb.) DOM'a basarken innerHTML yerine textContent kullanın veya escape edin. Aksi halde NUI içinde XSS mümkün olur.
+4. Performans ve Akış Hijyeni
+Mesaj gürültüsünü azaltın: her frame SendNUIMessage atmayın; yalnızca değişimde gönderin (event-driven), gerekirse throttle/debounce uygulayın.
+Büyük veri: çok büyük JSON payload'ları parça parça değil, gerektiğinde (menü açılışında) gönderin; sürekli akış gereken durumlar için minimal delta gönderin.
+action bazlı router: NUI tarafında tek bir message listener + switch(action) yapısı, dağınık listener'lardan daha yönetilebilirdir.
+Özet güven modeli
+Yön
+Araç
+Güven durumu
+Client → NUI
+SendNUIMessage
+Sadece gereken minimum veri gönder
+NUI → Client
+fetch  • RegisterNUICallback
+Gelen veri güvenilmez, doğrula
+Client → Server
+TriggerServerEvent
+Server yeniden doğrular
+Callback
+cb(...)
+Her durumda çağır, yoksa NUI asılı kalır
+Temel zihniyet: NUI bir sunum katmanıdır, otorite değil. Görsel olarak ne gösterdiği önemli değil; her kritik karar client'ta ön-doğrulanıp server'da nihai olarak doğrulanmalı.
+İstersen ox_lib NUI arayüzü, React/Vue tabanlı bir NUI kurulumunda güvenli mesajlaşma pattern'i, ya da callback'ler için bir Promise wrapper (client tarafında lib.callback benzeri) örneğini de gösterebilirim.
+Performans ve Optimizasyon: Büyük çaplı bir projede "Bottle-neck" (darboğaz) sorunlarını nasıl tespit ve optimize edersiniz?
+July 21 at 3:27 PM
+Thought
+FiveM'de büyük çaplı bir projede darboğaz (bottleneck) tespiti ve optimizasyonu, "tahmin etme, ölç" prensibiyle yürür. Aşağıda önce tespit, sonra optimizasyon katmanlarını anlatıyorum.
+1. Tespit: Ölçüm Araçları
+a) resmon (Resource Monitor)
+İlk durak her zaman resmon 1 komutudur. Her resource'un frame başına CPU süresini (ms) gösterir.
+Genel kural: bir resource idle'da 0.01 ms civarında olmalı; aktifken bile 0.5–1 ms üstü dikkat gerektirir.
+CPU ms değeri sürekli yüksek olan resource'lar önceliklendirilmeli.
+Renk kodu: yeşil iyi, sarı/kırmızı problem.
+b) profiler (yerleşik profiler)
+Daha derin analiz için:
+profiler record 500   -- 500 frame kaydet
+profiler view          -- Chrome tracing formatında görüntüle
+profiler save <file>
+​
+Kaydı chrome://tracing veya ui.perfetto.dev üzerinde açarak hangi fonksiyonun ne kadar sürdüğünü frame bazında görebilirsiniz. Fonksiyon seviyesinde "flame graph" en net darboğaz haritasıdır.
+c) resmon + client/server ayrımı
+Darboğaz client tarafında mı, server tarafında mı? İkisinde ayrı ayrı ölçün. Server tarafı için resmon konsolda; ayrıca txAdmin performans grafikleri (server tick süresi, %) izlenmeli.
+d) Server tick / OneSync
+Server tarafında svmain tick süresi ve OneSync yükü kritiktir. Çok fazla entity, sık TriggerClientEvent broadcast'i tick süresini şişirir.
+2. En Sık Görülen Darboğazlar
+a) Kötü Citizen.Wait() kullanımı — en yaygın suçlu
+Sonsuz döngülerde Wait(0) (her frame çalışır) exploit gibi CPU yer.
+-- KÖTÜ: her frame çalışıyor, oysa çoğu zaman gereksiz
+Citizen.CreateThread(function()
+    while true do
+        Wait(0)
+        local ped = PlayerPedId()
+        if IsControlPressed(0, 38) then ... end
+    end
+end)
+​
+Çözümler:
+Wait süresini dinamik yapın: yakında değilken uzun bekle, yakınken kısa bekle.
+Citizen.CreateThread(function()
+    while true do
+        local sleep = 1000            -- varsayılan: yavaş
+        local coords = GetEntityCoords(PlayerPedId())
+        local dist = #(coords - targetCoords)
+        if dist < 10.0 then
+            sleep = 0                 -- yakınken hızlı
+            -- etkileşim mantığı
+        end
+        Wait(sleep)
+    end
+end)
+​
+Bu tek pattern, kötü yazılmış bir resource'u 1.0 ms'den 0.01 ms'ye indirebilir.
+b) Sürekli döngüde native çağrısı
+GetEntityCoords, PlayerPedId gibi native'leri her frame çağırıp cache'lememek. Değeri değişmeyecekse döngü dışında bir kez alın veya periyodik güncelleyin.
+c) Distance check / marker / blip döngüleri
+Tüm zone'ları her frame kontrol etmek yerine:
+Önce ucuz bir grid/bölge kontrolü, sonra yakın olanlar için detay.
+DrawMarker sadece oyuncu yakınken çizilmeli.
+d) Event flooding
+Wait(0) içinde TriggerServerEvent çağırmak server'ı boğar. Event'ler debounce edilmeli, state-change'de tetiklenmeli.
+e) Veritabanı darboğazı (server)
+Senkron/bloklayan sorgular, indekssiz tablolar, döngü içinde tek tek sorgu (N+1).
+Çözüm: async sorgular (oxmysql/mysql-async), indeksleme, batch/bulk işlemler, gereksiz sık kayıt yerine periyodik/olay-bazlı kayıt.
+3. Optimizasyon Stratejileri
+a) Event-driven mimari (polling yerine)
+Sürekli "kontrol et" yerine "olduğunda haber ver". Örn. envanter değişimini her frame kontrol etmek yerine, değiştiğinde event tetikle. Bu, büyük projelerde en büyük kazanımdır.
+b) Thread konsolidasyonu
+Onlarca ayrı CreateThread yerine ilgili işleri tek thread'de toplayın; her thread'in kendi Wait yükü vardır.
+c) State bags & OneSync
+Oyuncular/entity'ler arası veri paylaşımında manuel event broadcast yerine state bags kullanın; replikasyon motoru bunu daha verimli dağıtır.
+Entity(vehicle).state:set('locked', true, true) -- replicated
+​
+d) Client'a yük dağıtımı
+Server tick'ini rahatlatmak için sadece o client'ı ilgilendiren hesapları client'ta yapın (ama otoriteyi server'da tutarak). Broadcast yerine hedefli TriggerClientEvent(event, specificSource, ...).
+e) Streaming & asset optimizasyonu
+Gereksiz büyük custom asset'ler (araç/MLO) streaming yükü ve client FPS düşüşü yaratır.
+data_file ve LOD ayarları, kullanılmayan asset'lerin kaldırılması.
+f) Lazy loading / on-demand
+Menü verisi, item listesi gibi şeyleri başlangıçta değil, ihtiyaç anında yükleyin.
+4. Sistematik Süreç (Metodoloji)
+Büyük projede darboğaz avı şu döngüyle yapılır:
+Ölç (baseline): resmon ile en pahalı 5 resource'u listele.
+İzole et: şüpheli resource'u tek başına test ortamında çalıştır.
+Profille: profiler record ile hangi fonksiyon/thread pahalı, tespit et.
+Hipotez + düzeltme: genelde Wait(0), uncached native, ya da event flood.
+Ölç (tekrar): aynı senaryoda ms farkını doğrula. İyileşme yoksa geri al.
+Yük altında test: boş sunucuda değil, gerçekçi oyuncu sayısında (veya bot/simülasyon ile) test et — çünkü bazı darboğazlar sadece OneSync yükü altında ortaya çıkar.
+Öncelik matrisi
+Belirti
+Muhtemel neden
+İlk müdahale
+Client resource yüksek ms
+Wait(0) / uncached native
+Dinamik Wait, cache
+Server tick yüksek
+Event flood / DB / entity sayısı
+Debounce, async DB, state bags
+FPS düşük ama resmon temiz
+Streaming/asset/render
+Asset & LOD optimizasyonu
+Ara ara spike
+GC, büyük payload, senkron sorgu
+Payload küçült, async, throttle
+Oyuncu arttıkça kötüleşme
+Broadcast / OneSync
+Hedefli event, state bag
+Temel felsefe: önce ölç, en pahalıyı hedefle, tek değişken değiştir, tekrar ölç. Tahminle optimizasyon büyük projelerde zaman kaybıdır.
+İstersen belirli bir senaryo için (ör. envanter sistemi, çok sayıda blip/marker, ya da DB-ağırlıklı bir job sistemi) somut bir "önce/sonra" optimizasyon örneği çıkarabilirim; ya da elindeki bir resource'un resmon/profiler çıktısını paylaşırsan birlikte darboğazı yorumlayabiliriz.
