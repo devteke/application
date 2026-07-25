@@ -18,7 +18,7 @@ function ensureListener() {
     const p = pending.get(reqId)
     if (!p) return
     pending.delete(reqId)
-    if (!ok) { p.reject(new Error("http_error")); return }
+    if (!ok) { p.reject(new Error(typeof body === "string" && body ? body : "http_error")); return }
     try { p.resolve(typeof body === "string" ? JSON.parse(body) : body) }
     catch (err) { p.reject(err) }
   })
