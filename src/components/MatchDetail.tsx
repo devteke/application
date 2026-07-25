@@ -2,10 +2,9 @@ import { useEventDetail } from "../hooks/useEventDetail"
 import { groupDetailMarkets } from "../utils/mapDetail"
 import type { DetailMarket, SbOutcome } from "../types/sportsbook"
 import "./MatchDetail.css"
-import { useCoupon } from "../context/CouponContext"
 
 const ocLabel = (n: string) => (n === "0" ? "X" : n)
-const MANY = 8 // bu sayıdan fazla seçenekli market = yoğun/geniş
+const MANY = 8
 
 export default function MatchDetail({ id }: { id: number }) {
   const { detail, loading, error } = useEventDetail(id)
@@ -17,8 +16,6 @@ export default function MatchDetail({ id }: { id: number }) {
   const groups = groupDetailMarkets(detail.m ?? [])
   if (!groups.length) return <div className="md md--state">Bu maç için ek market yok.</div>
 
-  const ev = { id: detail.i, name: `${detail.ph} - ${detail.pa}`, startsAt: detail.d }
-
   return (
     <div className="md">
       {groups.map((g) => {
@@ -27,7 +24,7 @@ export default function MatchDetail({ id }: { id: number }) {
           <section className={`md-card${wide ? " md-card--wide" : ""}`} key={g.key}>
             <header className="md-card__head">{g.label}</header>
             <div className="md-card__body">
-              {g.markets.map((m) => <MarketRow key={m.i} m={m} ev={ev} />)}
+              {g.markets.map((m) => <MarketRow key={m.i} m={m} />)}
             </div>
           </section>
         )
@@ -36,11 +33,9 @@ export default function MatchDetail({ id }: { id: number }) {
   )
 }
 
-function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string; startsAt: number } }) {
-  const { isPicked, pick } = useCoupon()
+function MarketRow({ m }: { m: DetailMarket }) {
   const many = m.o.length > MANY
   const stack = m.o.length > 3
-
   return (
     <div className={`md-mkt${stack ? " md-mkt--stack" : ""}${many ? " md-mkt--grid" : ""}`}>
       <div className="md-mkt__label">
@@ -50,29 +45,16 @@ function MarketRow({ m, ev }: { m: DetailMarket; ev: { id: number; name: string;
       <div className="md-mkt__outcomes">
         {m.o.map((o: SbOutcome, i) => {
           const open = o.od > 1
-          const active = isPicked(ev.id, m.i, o.on)
+          // Salt-görüntü: MatchDetail'den bahis OYNANMAZ (sadece MatchList).
           return (
-            <button
+            <div
               key={o.on ?? i}
-              className={`md-oc${open ? "" : " is-off"}${active ? " is-active" : ""}`}
-              disabled={!open}
-              onClick={() =>
-                open &&
-                pick({
-                  eventId: ev.id,
-                  eventName: ev.name,
-                  marketId: m.i,
-                  marketName: m.n,
-                  on: o.on,
-                  pick: ocLabel(o.n),
-                  odd: o.od,
-                  startsAt: ev.startsAt,
-                })
-              }
+              className={`md-oc md-oc--readonly${open ? "" : " is-off"}`}
+              aria-disabled={!open}
             >
               <span className="md-oc__lbl">{ocLabel(o.n)}</span>
               <span className="md-oc__od">{open ? o.od.toFixed(2) : "-"}</span>
-            </button>
+            </div>
           )
         })}
       </div>

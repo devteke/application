@@ -10,6 +10,7 @@ import {
 import type { Bet, SavedCoupon } from "../types/coupon"
 import { useCutoffTick } from "../hooks/useCutoffTick"
 import { BETTING } from "../config/betting"
+import { srvRequest } from "../utils/api"
 const UNIT = 1 // 1 misli = 1 TL
 
 interface CouponCtx {
@@ -93,24 +94,14 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     setMisliState(Number.isFinite(n) && n > 0 ? Math.floor(n) : 1)
   }, [])
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
     if (!active.length) return
-
-    const odd = active.reduce((a, b) => a * b.odd, 1)
-    const b = misli * UNIT
-
-    const coupon: SavedCoupon = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      bets: active,
+    const res = await srvRequest<{ id: string }>("placeCoupon", {
       misli,
-      totalOdd: odd,
-      bedel: b,
-      maxWin: b * odd,
-      createdAt: Date.now(),
-    }
-
-    setSaved((s) => [coupon, ...s])
+      bets: active.map((b) => ({ eventId: b.eventId, marketId: b.marketId, on: b.on })),
+    })
     setActive([])
+    // res.id ile sunucudan kupon listesini tazele (listCoupons)
   }, [active, misli])
 
   const removeSaved = useCallback((id: string) => {

@@ -4,9 +4,14 @@ export interface Bet {
   marketId: number
   marketName: string
   on: number
-  pick: string   // gösterilecek seçim etiketi: "1","X","2","1-X","Alt"...
+  pick: string
   odd: number
-  startsAt: number   // event başlama zamanı (ev.d, epoch ms) — kesim için
+  startsAt: number
+  
+  sbt: number          // market kategorisi: 1=MS, 92=ÇŞ, 100=Handikap, 101=Alt/Üst
+  ov: number | null    // baraj/handikap (100/101 için), yoksa null
+  statId: number       // statistics fetch id (ev.sgi ?? ev.i)
+  sportType: string    // "SOCCER"
 }
 
 export interface SavedCoupon {

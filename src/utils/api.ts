@@ -40,3 +40,31 @@ export async function apiGet<T>(path: string): Promise<T> {
   await fetchNui("apiGet", { reqId, path })
   return promise
 }
+
+const srvPending = new Map<number, { resolve: (v: any) => void; reject: (e: any) => void }>()
+let srvSeq = 0, srvListening = false
+
+function ensureSrvListener() {
+  if (srvListening) return
+  srvListening = true
+  window.addEventListener("message", (e: MessageEvent) => {
+    const msg = e.data
+    if (!msg || msg.action !== "srvResult") return
+    const { reqId, ok, data } = msg.data ?? {}
+    const p = srvPending.get(reqId); if (!p) return
+    srvPending.delete(reqId)
+    ok ? p.resolve(data) : p.reject(new Error(String(data ?? "srv_error")))
+  })
+}
+
+export async function srvRequest<T = unknown>(action: string, payload?: unknown): Promise<T> {
+  if (isEnvBrowser()) { /* dev mock */ return undefined as T }
+  ensureSrvListener()
+  const reqId = ++srvSeq
+  const promise = new Promise<T>((resolve, reject) => {
+    srvPending.set(reqId, { resolve, reject })
+    setTimeout(() => { if (srvPending.delete(reqId)) reject(new Error("timeout")) }, 15000)
+  })
+  await fetchNui("srv", { reqId, action, payload })
+  return promise
+}

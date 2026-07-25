@@ -125,12 +125,22 @@ export function dayInfo(ms: number) {
   return { key, label }
 }
 
+export const statIdOf = (ev: SbEvent) => ev.li ?? ev.i
+
 function cellFor(ev: SbEvent, mkt: SbMarket | undefined, on: number, pick: string): Cell {
   const o = mkt?.o.find((x) => x.on === on)
   if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
   return {
     txt: o.od.toFixed(2),
-    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on, pick, odd: o.od, startsAt: ev.d },
+    bet: {
+      eventId: ev.i, eventName: nameOf(ev),
+      marketId: mkt.i, marketName: mkt.n,
+      on, pick, odd: o.od, startsAt: ev.d,
+      sbt: mkt.sbt,
+      ov: mkt.ov != null ? num(mkt.ov) : null,
+      statId: statIdOf(ev),
+      sportType: ev.st,
+    },
   }
 }
 
@@ -140,7 +150,15 @@ function altUstCell(ev: SbEvent, mkt: SbMarket | undefined, which: "Alt" | "Üst
   if (!mkt || !o || o.od <= 1) return { txt: DASH, bet: null }
   return {
     txt: o.od.toFixed(2),
-    bet: { eventId: ev.i, eventName: nameOf(ev), marketId: mkt.i, marketName: mkt.n, on: o.on, pick: which, odd: o.od, startsAt: ev.d },
+    bet: {
+      eventId: ev.i, eventName: nameOf(ev),
+      marketId: mkt.i, marketName: mkt.n,
+      on: o.on, pick: which, odd: o.od, startsAt: ev.d,
+      sbt: mkt.sbt,
+      ov: mkt.ov != null ? num(mkt.ov) : null,
+      statId: statIdOf(ev),
+      sportType: ev.st,
+    },
   }
 }
 

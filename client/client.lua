@@ -89,3 +89,35 @@ RegisterNetEvent('app:apiResult', function(reqId, ok, body)
         }
     })
 end)
+
+RegisterNUICallback('srv', function(data, cb)
+    if type(data) ~= 'table' or type(data.reqId) ~= 'number' or type(data.action) ~= 'string' then
+        cb({
+            ok = false,
+            error = 'invalid_input'
+        });
+        return
+    end
+    TriggerServerEvent('app:srv', data.reqId, data.action, data.payload)
+    cb({
+        ok = true
+    }) -- sonuç app:srvResult ile dönecek
+end)
+
+RegisterNetEvent('app:srvResult', function(reqId, ok, data)
+    SendNUIMessage({
+        action = 'srvResult',
+        data = {
+            reqId = reqId,
+            ok = ok,
+            data = data
+        }
+    })
+end)
+
+RegisterNetEvent('app:setPlayer', function(player)
+    SendNUIMessage({
+        action = 'setPlayer',
+        data = player
+    }) -- gerçek bakiye server'dan
+end)

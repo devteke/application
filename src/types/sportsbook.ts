@@ -21,6 +21,8 @@ export interface SbMarket {
 
 export interface SbEvent {
   i: number
+  li?: number
+   sgi?: number
   d: number       // başlangıç (epoch ms)
   s: string
   st: string      // spor (SOCCER)
