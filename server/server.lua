@@ -37,27 +37,21 @@ end
 -- Genel NUI RPC: NUI sadece niyet gönderir, server doğrular
 local rpcCd = {}
 RegisterNetEvent('app:srv', function(reqId, action, payload)
-    local src = source
-    if type(reqId) ~= 'number' or type(action) ~= 'string' then
-        return
-    end
-    local now = GetGameTimer()
-    if rpcCd[src] and now < rpcCd[src] then
-        TriggerClientEvent('app:srvResult', src, reqId, false, 'rate_limited');
-        return
-    end
-    rpcCd[src] = now + App.Config.RpcCooldownMs
-    CreateThread(function()
-        local ok, data
-        if action == 'placeCoupon' then
-            ok, data = App.Coupons.place(src, payload)
-        elseif action == 'listCoupons' then
-            ok, data = App.Coupons.list(src)
-        else
-            ok, data = false, 'unknown_action'
-        end
-        TriggerClientEvent('app:srvResult', src, reqId, ok, data)
-    end)
+  local src = source
+  if type(reqId) ~= 'number' or type(action) ~= 'string' then return end
+  local now = GetGameTimer()
+  if rpcCd[src] and now < rpcCd[src] then
+    TriggerClientEvent('app:srvResult', src, reqId, false, 'rate_limited'); return
+  end
+  rpcCd[src] = now + App.Config.RpcCooldownMs
+  CreateThread(function()
+    App.Economy.claimPending(src)   -- <<< birikmiş offline ödemeleri yatır
+    local ok, data
+    if     action == 'placeCoupon' then ok, data = App.Coupons.place(src, payload)
+    elseif action == 'listCoupons' then ok, data = App.Coupons.list(src)
+    else   ok, data = false, 'unknown_action' end
+    TriggerClientEvent('app:srvResult', src, reqId, ok, data)
+  end)
 end)
 
 -- Read-only API proxy: path whitelist + anti-flood
@@ -96,4 +90,20 @@ AddEventHandler('playerDropped', function()
     local s = source;
     rpcCd[s] = nil;
     apiCd[s] = nil
+end)
+
+
+-- app:srv handler'ının EN BAŞINA (CreateThread içine, dispatch'ten ÖNCE) ekle:
+--   App.Economy.claimPending(src)
+-- Yani oyuncu uygulamayı her açıp bir istek attığında birikmiş ödemeler otomatik yatar.
+
+-- Ek olarak, oyuncu yüklenince de dene (best-effort; Qbox QB-uyumlu event):
+AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
+  local src = player and player.PlayerData and player.PlayerData.source
+  if src then
+    CreateThread(function()
+      Wait(2000) -- karakter tam yüklensin
+      App.Economy.claimPending(src)
+    end)
+  end
 end)
