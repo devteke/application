@@ -3,7 +3,7 @@ local E = {}
 local qbx = exports.qbx_core
 local MONEY = App.Config.MoneyType or 'bank'
 
--- === Kimlik: her zaman server'da türetilir ===
+-- Kimlik = citizenid (server'da türetilir, client'a güven yok)
 function E.identifier(src)
   local player = qbx:GetPlayer(src)
   return player and player.PlayerData.citizenid or nil
@@ -19,7 +19,6 @@ function E.removeMoney(src, amount, reason)
   if type(amount) ~= 'number' or amount <= 0 then return false end
   local player = qbx:GetPlayer(src)
   if not player then return false end
-  -- Qbox/QB: yeterli bakiye yoksa false döner (atomik)
   return player.Functions.RemoveMoney(MONEY, amount, reason) == true
 end
 
@@ -30,17 +29,13 @@ function E.addMoney(src, amount, reason)
   return player.Functions.AddMoney(MONEY, amount, reason) == true
 end
 
--- === Settlement ödemesi (citizenid bazlı; oyuncu offline olabilir) ===
--- coupons.lua bunu App.Economy.payByIdentifier(citizenid, amount, reason) olarak çağırıyor.
+-- Settlement ödemesi (citizenid bazlı; oyuncu offline olabilir)
 function E.payByIdentifier(citizenid, amount, reason)
   if type(amount) ~= 'number' or amount <= 0 then return true end
-
   local online = qbx:GetPlayerByCitizenId(citizenid)
   if online then
     return online.Functions.AddMoney(MONEY, amount, reason or 'bahis-odeme') == true
   end
-
-  -- Offline: kuyruğa yaz, oyuncu girince tahsil edilir
   MySQL.insert.await(
     'INSERT INTO betting_payouts (citizenid, amount, money_type, reason, created_at) VALUES (?,?,?,?,?)',
     { citizenid, math.floor(amount + 0.5), MONEY, reason or 'bahis-odeme', os.time() * 1000 })
@@ -48,7 +43,7 @@ function E.payByIdentifier(citizenid, amount, reason)
   return false
 end
 
--- === Bekleyen (offline biriken) ödemeleri tahsil et ===
+-- Biriken offline ödemeleri tahsil et
 function E.claimPending(src)
   local cid = E.identifier(src)
   if not cid then return end

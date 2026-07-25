@@ -11,6 +11,7 @@ import type { Bet, SavedCoupon } from "../types/coupon"
 import { useCutoffTick } from "../hooks/useCutoffTick"
 import { BETTING } from "../config/betting"
 import { srvRequest } from "../utils/api"
+
 const UNIT = 1 // 1 misli = 1 TL
 
 interface CouponCtx {
@@ -25,11 +26,56 @@ interface CouponCtx {
   remove: (eventId: number) => void
   clear: () => void
   setMisli: (n: number) => void
-  save: () => void
+  save: () => Promise<void>
   removeSaved: (id: string) => void
+  refreshSaved: () => Promise<void>
 }
 
 const Ctx = createContext<CouponCtx | null>(null)
+
+// --- Sunucudan gelen kupon şekli (server/coupons.lua Coupons.list ile birebir) ---
+type ServerBet = {
+  eventId: number
+  statId: number
+  name: string
+  startsAt: number
+  marketId: number
+  marketName: string
+  sbt: number
+  ov: number | null
+  on: number
+  pick: string
+  odd: number
+  sportType: string
+  result?: Bet["result"]
+}
+type ServerCoupon = {
+  id: string
+  misli: number
+  bedel: number
+  totalOdd: number
+  maxWin: number
+  status: SavedCoupon["status"]
+  payout: number
+  createdAt: number
+  bets: ServerBet[]
+}
+
+const toBet = (b: ServerBet): Bet => ({
+  eventId: b.eventId,
+  eventName: b.name,
+  marketId: b.marketId,
+  marketName: b.marketName,
+  on: b.on,
+  pick: b.pick,
+  odd: b.odd,
+  startsAt: b.startsAt,
+  sbt: b.sbt,
+  ov: b.ov,
+  statId: b.statId,
+  sportType: b.sportType,
+  result: b.result,
+})
 
 export function CouponProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Bet[]>([])
@@ -42,9 +88,10 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     const now = Date.now()
     setActive((prev) => {
       const next = prev.filter((b) => b.startsAt - BETTING.cutoffLeadMs > now)
-      return next.length === prev.length ? prev : next   // değişiklik yoksa render tetikleme
+      return next.length === prev.length ? prev : next // değişiklik yoksa render tetikleme
     })
   }, [couponTick])
+
   const totalOdd = useMemo(
     () => active.reduce((acc, b) => acc * b.odd, 1),
     [active],
@@ -65,7 +112,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   )
 
   const pick = useCallback((bet: Bet) => {
-    if (bet.startsAt - BETTING.cutoffLeadMs <= Date.now()) return  // süresi geçmişse ekleme
+    if (bet.startsAt - BETTING.cutoffLeadMs <= Date.now()) return // süresi geçmişse ekleme
     setActive((prev) => {
       const same = prev.find(
         (b) =>
@@ -94,16 +141,52 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     setMisliState(Number.isFinite(n) && n > 0 ? Math.floor(n) : 1)
   }, [])
 
+  // Kayıtlı kuponları sunucudan çek (tek otorite server)
+  const refreshSaved = useCallback(async () => {
+    try {
+      const list = await srvRequest<ServerCoupon[]>("listCoupons")
+      if (!Array.isArray(list)) return
+      setSaved(
+        list.map((c) => ({
+          id: c.id,
+          misli: c.misli,
+          bedel: c.bedel,
+          totalOdd: c.totalOdd,
+          maxWin: c.maxWin,
+          createdAt: c.createdAt,
+          status: c.status,
+          payout: c.payout,
+          bets: c.bets.map(toBet),
+        })),
+      )
+    } catch {
+      /* dev/browser: sunucu yok, yoksay */
+    }
+  }, [])
+
+  // Açılışta bir kez yükle
+  useEffect(() => {
+    refreshSaved()
+  }, [refreshSaved])
+
+  // Kaydet (server otoriter) + listeyi tazele
   const save = useCallback(async () => {
     if (!active.length) return
-    const res = await srvRequest<{ id: string }>("placeCoupon", {
+    await srvRequest("placeCoupon", {
       misli,
-      bets: active.map((b) => ({ eventId: b.eventId, marketId: b.marketId, on: b.on })),
+      bets: active.map((b) => ({
+        eventId: b.eventId,
+        marketId: b.marketId,
+        on: b.on,
+      })),
     })
     setActive([])
-    // res.id ile sunucudan kupon listesini tazele (listCoupons)
-  }, [active, misli])
+    await refreshSaved()
+  }, [active, misli, refreshSaved])
 
+  // Not: kupon DB'de mali kayıt. Bu yalnızca yerelden gizler; bir sonraki
+  // refreshSaved'da geri gelir. Kalıcı silme için sunucuya yetki-kontrollü
+  // bir "deleteCoupon" aksiyonu eklenmeli.
   const removeSaved = useCallback((id: string) => {
     setSaved((s) => s.filter((c) => c.id !== id))
   }, [])
@@ -123,6 +206,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
       setMisli,
       save,
       removeSaved,
+      refreshSaved,
     }),
     [
       active,
@@ -138,6 +222,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
       setMisli,
       save,
       removeSaved,
+      refreshSaved,
     ],
   )
 

@@ -30,7 +30,7 @@ function Coupons.place(src, payload)
        or type(b.marketId) ~= 'number' or type(b.on) ~= 'number' then
       return false, 'invalid_selection'
     end
-    if seen[b.eventId] then return false, 'duplicate_event' end  -- maç başına tek bahis
+    if seen[b.eventId] then return false, 'duplicate_event' end -- maç başına tek bahis
     seen[b.eventId] = true
     local r, err = App.Bulletin.resolve(b.eventId, b.marketId, b.on, now)
     if not r then return false, err end
@@ -70,7 +70,7 @@ function Coupons.place(src, payload)
       { id, ident, misli, stake, totalOdd, maxWin, 'pending', json.encode(bets), now })
   end)
   if not ok then
-    App.Economy.addMoney(src, stake, 'bahis-iade')   -- DB hata => iade
+    App.Economy.addMoney(src, stake, 'bahis-iade') -- DB hata => iade
     return false, 'db_error'
   end
 
@@ -98,32 +98,40 @@ end
 
 -- === SONUÇLANDIRMA ===
 local function settleOnce()
-  local rows = MySQL.query.await("SELECT id,identifier,stake,bets FROM betting_coupons WHERE status='pending' LIMIT 200", {}) or {}
+  local rows = MySQL.query.await(
+    "SELECT id,identifier,stake,bets FROM betting_coupons WHERE status='pending' LIMIT 200", {}) or {}
   if #rows == 0 then return end
 
+  -- benzersiz statId'leri topla
   local need = {}
   for _, r in ipairs(rows) do
     for _, b in ipairs(json.decode(r.bets)) do need[b.statId] = b.sportType or 'SOCCER' end
   end
+
+  -- statistics API'den sonuçları çek (rate-friendly)
   local stats = {}
   for statId, sport in pairs(need) do
     local res = App.Http.get((App.Config.StatsPath):format(sport, statId))
     if res.ok and res.body and res.body.data then stats[statId] = res.body.data end
-    Wait(150)  -- API'yi boğma
+    Wait(150)
   end
 
   for _, r in ipairs(rows) do
     local bets, perBet = json.decode(r.bets), {}
-    for i, b in ipairs(bets) do perBet[i] = App.Settle.bet(b, stats[b.statId]) end
+    for i, b in ipairs(bets) do
+      perBet[i] = App.Settle.bet(b, stats[b.statId])
+      b.result  = perBet[i]                       -- maç bazlı sonucu snapshot'a işle
+    end
     local result = App.Settle.coupon(perBet)
     if result ~= 'pending' then
       local payout = 0
       if result == 'won'  then payout = math.floor(r.stake * App.Settle.settledOdd(bets, perBet) + 0.5)
       elseif result == 'void' then payout = r.stake end
       if payout > 0 then App.Economy.payByIdentifier(r.identifier, payout, 'bahis-' .. result) end
-      -- idempotent: sadece hâlâ pending ise güncelle
-      MySQL.update.await("UPDATE betting_coupons SET status=?,payout=?,settled_at=? WHERE id=? AND status='pending'",
-        { result, payout, os.time() * 1000, r.id })
+      -- idempotent: sadece hâlâ pending ise güncelle; bets de per-bet sonuçla yazılır
+      MySQL.update.await(
+        "UPDATE betting_coupons SET status=?, payout=?, bets=?, settled_at=? WHERE id=? AND status='pending'",
+        { result, payout, json.encode(bets), os.time() * 1000, r.id })
       App.log('info', ('kupon %s => %s payout=%d'):format(r.id, result, payout))
     end
   end
