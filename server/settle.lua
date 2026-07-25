@@ -4,7 +4,8 @@ local S = {}
 local function o1x2(h, a) if h > a then return '1' elseif h < a then return '2' else return 'X' end end
 local function goals(team)
   if not team or not team.s then return nil end
-  local g = team.s.c; if g == nil then g = team.s.r end
+  local g = team.s.r            -- REGÜLASYON (90dk) skoru — bahis buna göre; penaltı/uzatma sayılmaz
+  if g == nil then g = team.s.c end
   if type(g) ~= 'number' then return nil end
   return g
 end

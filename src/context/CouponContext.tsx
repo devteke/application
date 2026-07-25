@@ -27,7 +27,7 @@ interface CouponCtx {
   clear: () => void
   setMisli: (n: number) => void
   save: () => Promise<void>
-  removeSaved: (id: string) => void
+  removeSaved: (id: string) => Promise<void>
   refreshSaved: () => Promise<void>
 }
 
@@ -184,12 +184,17 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     await refreshSaved()
   }, [active, misli, refreshSaved])
 
-  // Not: kupon DB'de mali kayıt. Bu yalnızca yerelden gizler; bir sonraki
-  // refreshSaved'da geri gelir. Kalıcı silme için sunucuya yetki-kontrollü
-  // bir "deleteCoupon" aksiyonu eklenmeli.
-  const removeSaved = useCallback((id: string) => {
-    setSaved((s) => s.filter((c) => c.id !== id))
-  }, [])
+// Sunucu-otoriter kalıcı silme (soft-delete). İyimser kaldır, hata olursa geri getir.
+const removeSaved = useCallback(async (id: string) => {
+  const prev = saved
+  setSaved((s) => s.filter((c) => c.id !== id)) // iyimser UI
+  try {
+    await srvRequest("deleteCoupon", { id })
+    await refreshSaved()
+  } catch {
+    setSaved(prev) // başarısız (ör. pending/başkasının) => geri getir
+  }
+}, [saved, refreshSaved])
 
   const value = useMemo<CouponCtx>(
     () => ({

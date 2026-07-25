@@ -14,6 +14,7 @@ end
 
 -- ============================================================
 -- Genel NUI RPC: NUI sadece niyet gönderir, server doğrular
+-- Anti-flood AKSİYON BAZLI (place ve list birbirini kilitlemez)
 -- ============================================================
 local rpcCd = {}
 RegisterNetEvent('app:srv', function(reqId, action, payload)
@@ -21,21 +22,24 @@ RegisterNetEvent('app:srv', function(reqId, action, payload)
   if type(reqId) ~= 'number' or type(action) ~= 'string' then return end
 
   local now = GetGameTimer()
-  if rpcCd[src] and now < rpcCd[src] then
+  rpcCd[src] = rpcCd[src] or {}
+  if rpcCd[src][action] and now < rpcCd[src][action] then
     TriggerClientEvent('app:srvResult', src, reqId, false, 'rate_limited')
     return
   end
-  rpcCd[src] = now + App.Config.RpcCooldownMs
+  rpcCd[src][action] = now + App.Config.RpcCooldownMs
 
   CreateThread(function()
     App.Economy.claimPending(src) -- birikmiş offline ödemeleri yatır
     local ok, data
-    if     action == 'placeCoupon' then ok, data = App.Coupons.place(src, payload)
-    elseif action == 'listCoupons' then ok, data = App.Coupons.list(src)
+    if     action == 'placeCoupon'  then ok, data = App.Coupons.place(src, payload)
+    elseif action == 'listCoupons'  then ok, data = App.Coupons.list(src)
+    elseif action == 'deleteCoupon' then ok, data = App.Coupons.delete(src, payload)
     else   ok, data = false, 'unknown_action' end
     TriggerClientEvent('app:srvResult', src, reqId, ok, data)
   end)
 end)
+
 
 -- ============================================================
 -- Read-only API proxy (TEK handler)
@@ -54,10 +58,9 @@ local function pathOk(p)
   return false
 end
 
--- Token bucket: anlık patlamaya izin verir, sürekli spam'i keser
 local buckets = {}
-local BUCKET_MAX    = 25   -- anlık patlama kapasitesi
-local BUCKET_REFILL = 12   -- saniyede yeniden dolan token
+local BUCKET_MAX    = 25
+local BUCKET_REFILL = 12
 
 local function allowApi(src)
   local now = GetGameTimer()
@@ -104,12 +107,11 @@ AddEventHandler('playerDropped', function()
   buckets[s] = nil
 end)
 
--- Oyuncu yüklenince bekleyen offline ödemeleri dene (Qbox / QB-bridge)
 AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
   local src = player and player.PlayerData and player.PlayerData.source
   if src then
     CreateThread(function()
-      Wait(2000) -- karakter tam yüklensin
+      Wait(2000)
       App.Economy.claimPending(src)
     end)
   end

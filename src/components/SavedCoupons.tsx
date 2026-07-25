@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCoupon } from "../context/CouponContext"
 import type { BetResult, CouponResult } from "../types/coupon"
 import "./SavedCoupons.css"
@@ -17,8 +17,13 @@ function StatusBadge({ result }: { result: CouponResult }) {
 export default function SavedCoupons({
   embedded, onBack,
 }: { embedded?: boolean; onBack?: () => void }) {
-  const { saved, removeSaved } = useCoupon()
+  const { saved, removeSaved, refreshSaved } = useCoupon()
   const [openId, setOpenId] = useState<string | null>(null)
+
+  // Panel her açıldığında sunucudan güncel listeyi çek (sonuçlanmış kuponlar dahil)
+  useEffect(() => {
+    refreshSaved()
+  }, [refreshSaved])
 
   const openIndex = saved.findIndex((c) => c.id === openId)
   const openCoupon = openIndex >= 0 ? saved[openIndex] : null
@@ -76,12 +81,16 @@ export default function SavedCoupons({
               : <span>Maks: {openCoupon.maxWin.toFixed(2)} TL</span>}
           </div>
 
-          <button
-            className="skc__del"
-            onClick={() => { removeSaved(openCoupon.id); setOpenId(null) }}
-          >
-            Gizle
-          </button>
+          {openCoupon.status === "pending" ? (
+            <span className="skc__note">Aktif kupon silinemez</span>
+          ) : (
+            <button
+              className="skc__del"
+              onClick={() => { removeSaved(openCoupon.id); setOpenId(null) }}
+            >
+              Sil
+            </button>
+          )}
         </div>
       </div>
     </div>
