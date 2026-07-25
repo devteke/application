@@ -8,7 +8,16 @@ local function onCooldown(src, key, ms)
 end
 local function newId() return ('%d-%06d'):format(os.time(), math.random(0, 999999)) end
 
--- === OYNAMA ===
+local function nCk(n, k)
+  if k < 0 or k > n then return 0 end
+  if k == 0 or k == n then return 1 end
+  k = math.min(k, n - k)
+  local res = 1
+  for i = 1, k do res = res * (n - k + i) // i end
+  return res
+end
+
+-- === OYNAMA (kombine + sistem) ===
 function Coupons.place(src, payload)
   if onCooldown(src, 'place', App.Config.PlaceCooldownMs) then return false, 'rate_limited' end
 
@@ -22,6 +31,8 @@ function Coupons.place(src, payload)
   local n = #sel
   if n < App.Config.MinSelections or n > App.Config.MaxSelections then return false, 'invalid_count' end
 
+  local btype = (payload.type == 'system') and 'system' or 'combi'
+
   local now, resolved, seen, totalOdd = os.time() * 1000, {}, {}, 1.0
   for _, b in ipairs(sel) do
     if type(b) ~= 'table' or type(b.eventId) ~= 'number'
@@ -32,14 +43,49 @@ function Coupons.place(src, payload)
     seen[b.eventId] = true
     local r, err = App.Bulletin.resolve(b.eventId, b.marketId, b.on, now)
     if not r then return false, err end
+    r.banko = (btype == 'system') and (b.banko == true) or false
     totalOdd = totalOdd * r.odd
     resolved[#resolved + 1] = r
   end
 
-  if totalOdd > App.Config.MaxOdd then return false, 'odd_too_high' end
-  local stake = misli * App.Config.UnitPrice
-  if stake > App.Config.MaxStake then return false, 'stake_too_high' end
-  local maxWin = math.floor(stake * totalOdd + 0.5)
+  local combos, cleanSizes, stake, maxWin
+
+  if btype == 'system' then
+    if n < 3 then return false, 'system_min_selections' end
+    local M, bankoProd, nb = 0, 1.0, {}
+    for _, r in ipairs(resolved) do
+      if r.banko then bankoProd = bankoProd * r.odd else M = M + 1; nb[#nb + 1] = r.odd end
+    end
+    if M < 2 then return false, 'system_needs_nonbanko' end  -- en az 2 banko-dışı maç
+
+    local sizes = payload.sizes
+    if type(sizes) ~= 'table' or #sizes == 0 then return false, 'invalid_sizes' end
+    local seenK = {}
+    cleanSizes, combos = {}, 0
+    for _, k in ipairs(sizes) do
+      if type(k) ~= 'number' or k ~= math.floor(k) or k < 1 or k > M then return false, 'invalid_size' end
+      if not seenK[k] then
+        seenK[k] = true
+        cleanSizes[#cleanSizes + 1] = k
+        combos = combos + nCk(M, k)
+      end
+    end
+    if combos < 1 then return false, 'invalid_combos' end
+
+    local e = App.Settle.esp(nb)
+    local sum = 0.0
+    for _, k in ipairs(cleanSizes) do sum = sum + (e[k] or 0) end
+    stake  = misli * combos * App.Config.UnitPrice
+    maxWin = math.floor(misli * bankoProd * sum + 0.5)
+  else
+    if App.Config.MaxOdd > 0 and totalOdd > App.Config.MaxOdd then return false, 'odd_too_high' end
+    combos = 1
+    stake  = misli * App.Config.UnitPrice
+    maxWin = math.floor(stake * totalOdd + 0.5)
+  end
+
+  if App.Config.MaxStake > 0 and stake  > App.Config.MaxStake then return false, 'stake_too_high' end
+  if App.Config.MaxWin   > 0 and maxWin > App.Config.MaxWin   then return false, 'win_too_high' end
 
   local ident = App.Economy.identifier(src)
   if not ident then return false, 'no_identifier' end
@@ -56,21 +102,25 @@ function Coupons.place(src, payload)
       eventId = r.eventId, statId = r.statId, name = r.name, startsAt = r.startsAt,
       marketId = r.marketId, marketName = r.marketName, sbt = r.sbt, ov = r.ov,
       on = r.on, pick = r.pick, odd = r.odd, sportType = 'SOCCER',
+      banko = r.banko or nil,
     }
   end
+
+  local meta = json.encode({ type = btype, sizes = cleanSizes, combos = combos })
+
   local ok = pcall(function()
     MySQL.insert.await(
-      'INSERT INTO betting_coupons (id,identifier,misli,stake,total_odd,max_win,status,bets,created_at) '
-      .. 'VALUES (?,?,?,?,?,?,?,?,?)',
-      { id, ident, misli, stake, totalOdd, maxWin, 'pending', json.encode(bets), now })
+      'INSERT INTO betting_coupons (id,identifier,misli,stake,total_odd,max_win,status,bets,meta,created_at) '
+      .. 'VALUES (?,?,?,?,?,?,?,?,?,?)',
+      { id, ident, misli, stake, totalOdd, maxWin, 'pending', json.encode(bets), meta, now })
   end)
   if not ok then
     App.Economy.addMoney(src, stake, 'bahis-iade')
     return false, 'db_error'
   end
 
-  App.log('info', ('%s kupon açtı %s stake=%d oran=%.2f'):format(ident, id, stake, totalOdd))
-  return true, { id = id, stake = stake, totalOdd = totalOdd, maxWin = maxWin }
+  App.log('info', ('%s %s kupon açtı %s stake=%d combos=%d'):format(ident, btype, id, stake, combos))
+  return true, { id = id, stake = stake, totalOdd = totalOdd, maxWin = maxWin, combos = combos }
 end
 
 -- === LİSTELEME (yalnız gizlenmemiş) ===
@@ -78,33 +128,36 @@ function Coupons.list(src)
   local ident = App.Economy.identifier(src)
   if not ident then return false, 'no_identifier' end
   local rows = MySQL.query.await(
-    'SELECT id,misli,stake,total_odd,max_win,status,payout,bets,created_at,settled_at '
+    'SELECT id,misli,stake,total_odd,max_win,status,payout,bets,meta,created_at,settled_at '
     .. 'FROM betting_coupons WHERE identifier = ? AND hidden = 0 ORDER BY created_at DESC LIMIT 100', { ident }) or {}
   local out = {}
   for _, r in ipairs(rows) do
+    local meta = r.meta and json.decode(r.meta) or nil
     out[#out + 1] = {
-      id       = r.id,
-      misli    = tonumber(r.misli) or 0,
-      bedel    = tonumber(r.stake) or 0,
-      totalOdd = tonumber(r.total_odd) or 0,
-      maxWin   = tonumber(r.max_win) or 0,
-      status   = r.status,
-      payout   = tonumber(r.payout) or 0,
+      id        = r.id,
+      misli     = tonumber(r.misli) or 0,
+      bedel     = tonumber(r.stake) or 0,
+      totalOdd  = tonumber(r.total_odd) or 0,
+      maxWin    = tonumber(r.max_win) or 0,
+      status    = r.status,
+      payout    = tonumber(r.payout) or 0,
       createdAt = tonumber(r.created_at) or 0,
-      bets     = json.decode(r.bets),
+      betType   = meta and meta.type or 'combi',
+      sizes     = meta and meta.sizes or nil,
+      combos    = meta and meta.combos or 1,
+      bets      = json.decode(r.bets),
     }
   end
   return true, out
 end
 
--- === SİLME (yalnız kendi + SONUÇLANMIŞ kuponlar; soft-delete) ===
+-- === SİLME (yalnız kendi + SONUÇLANMIŞ; soft-delete) ===
 function Coupons.delete(src, payload)
   if type(payload) ~= 'table' or type(payload.id) ~= 'string' or payload.id == '' then
     return false, 'invalid_input'
   end
   local ident = App.Economy.identifier(src)
   if not ident then return false, 'no_identifier' end
-  -- pending (aktif bahis) silinemez; sadece won/lost/void gizlenir. Sahiplik zorunlu.
   local affected = MySQL.update.await(
     "UPDATE betting_coupons SET hidden = 1 "
     .. "WHERE id = ? AND identifier = ? AND status <> 'pending' AND hidden = 0",
@@ -117,7 +170,7 @@ end
 -- === SONUÇLANDIRMA ===
 local function settleOnce()
   local rows = MySQL.query.await(
-    "SELECT id,identifier,stake,bets FROM betting_coupons WHERE status='pending' LIMIT 200", {}) or {}
+    "SELECT id,identifier,misli,stake,bets,meta FROM betting_coupons WHERE status='pending' LIMIT 200", {}) or {}
   if #rows == 0 then return end
 
   local need = {}
@@ -139,17 +192,27 @@ local function settleOnce()
   end
 
   for _, r in ipairs(rows) do
-    local bets, perBet = json.decode(r.bets), {}
+    local bets, perBet, pending = json.decode(r.bets), {}, false
     for i, b in ipairs(bets) do
       perBet[i] = App.Settle.bet(b, stats[b.statId])
-      b.result  = perBet[i]
+      if perBet[i] == 'pending' then pending = true end
+      b.result = perBet[i]
     end
-    local result = App.Settle.coupon(perBet)
-    if result ~= 'pending' then
-      local stake = tonumber(r.stake) or 0
-      local payout = 0
-      if result == 'won'  then payout = math.floor(stake * App.Settle.settledOdd(bets, perBet) + 0.5)
-      elseif result == 'void' then payout = stake end
+
+    if not pending then
+      local meta   = r.meta and json.decode(r.meta) or { type = 'combi' }
+      local stake  = tonumber(r.stake) or 0
+      local result, payout
+
+      if meta.type == 'system' then
+        payout, result = App.Settle.system(bets, perBet, meta.sizes or {}, tonumber(r.misli) or 0)
+      else
+        result = App.Settle.coupon(perBet)
+        payout = 0
+        if result == 'won'  then payout = math.floor(stake * App.Settle.settledOdd(bets, perBet) + 0.5)
+        elseif result == 'void' then payout = stake end
+      end
+
       if payout > 0 then App.Economy.payByIdentifier(r.identifier, payout, 'bahis-' .. result) end
       MySQL.update.await(
         "UPDATE betting_coupons SET status=?, payout=?, bets=?, settled_at=? WHERE id=? AND status='pending'",

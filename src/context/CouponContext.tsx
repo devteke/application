@@ -7,12 +7,27 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import type { Bet, SavedCoupon } from "../types/coupon"
+import type { Bet, BetMode, SavedCoupon } from "../types/coupon"
 import { useCutoffTick } from "../hooks/useCutoffTick"
 import { BETTING } from "../config/betting"
 import { srvRequest } from "../utils/api"
 
 const UNIT = 1 // 1 misli = 1 TL
+
+// --- kombinatorik yardımcıları (server ile birebir) ---
+function esp(odds: number[]): number[] {
+  const e = [1]
+  for (let j = 1; j <= odds.length; j++) e[j] = 0
+  for (const x of odds) for (let j = odds.length; j >= 1; j--) e[j] += e[j - 1] * x
+  return e
+}
+function nCk(n: number, k: number): number {
+  if (k < 0 || k > n) return 0
+  k = Math.min(k, n - k)
+  let r = 1
+  for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i
+  return Math.round(r)
+}
 
 interface CouponCtx {
   active: Bet[]
@@ -21,6 +36,16 @@ interface CouponCtx {
   totalOdd: number
   bedel: number
   maxWin: number
+  // mod / sistem
+  mode: BetMode
+  setMode: (m: BetMode) => void
+  isBanko: (eventId: number) => boolean
+  toggleBanko: (eventId: number) => void
+  sizes: number[]
+  toggleSize: (k: number) => void
+  nonBankoCount: number
+  combos: number
+  // aksiyonlar
   isPicked: (eventId: number, marketId: number, on: number) => boolean
   pick: (bet: Bet) => void
   remove: (eventId: number) => void
@@ -33,7 +58,6 @@ interface CouponCtx {
 
 const Ctx = createContext<CouponCtx | null>(null)
 
-// --- Sunucudan gelen kupon şekli (server/coupons.lua Coupons.list ile birebir) ---
 type ServerBet = {
   eventId: number
   statId: number
@@ -47,6 +71,7 @@ type ServerBet = {
   pick: string
   odd: number
   sportType: string
+  banko?: boolean
   result?: Bet["result"]
 }
 type ServerCoupon = {
@@ -58,6 +83,9 @@ type ServerCoupon = {
   status: SavedCoupon["status"]
   payout: number
   createdAt: number
+  betType?: BetMode
+  sizes?: number[]
+  combos?: number
   bets: ServerBet[]
 }
 
@@ -74,6 +102,7 @@ const toBet = (b: ServerBet): Bet => ({
   ov: b.ov,
   statId: b.statId,
   sportType: b.sportType,
+  banko: b.banko,
   result: b.result,
 })
 
@@ -81,50 +110,74 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Bet[]>([])
   const [misli, setMisliState] = useState(1)
   const [saved, setSaved] = useState<SavedCoupon[]>([])
+  const [mode, setMode] = useState<BetMode>("combi")
+  const [bankoIds, setBankoIds] = useState<number[]>([])
+  const [sizes, setSizes] = useState<number[]>([])
+
   const activeStarts = useMemo(() => active.map((b) => b.startsAt), [active])
   const couponTick = useCutoffTick(activeStarts)
 
+  // Kesim: süresi gelen bahsi kupondan düşür
   useEffect(() => {
     const now = Date.now()
     setActive((prev) => {
       const next = prev.filter((b) => b.startsAt - BETTING.cutoffLeadMs > now)
-      return next.length === prev.length ? prev : next // değişiklik yoksa render tetikleme
+      return next.length === prev.length ? prev : next
     })
   }, [couponTick])
 
-  const totalOdd = useMemo(
-    () => active.reduce((acc, b) => acc * b.odd, 1),
-    [active],
+  // active değişince artık kuponda olmayan banko id'lerini temizle
+  useEffect(() => {
+    setBankoIds((prev) => {
+      const ids = new Set(active.map((b) => b.eventId))
+      const next = prev.filter((id) => ids.has(id))
+      return next.length === prev.length ? prev : next
+    })
+  }, [active])
+
+  const bankoSet = useMemo(() => new Set(bankoIds), [bankoIds])
+  const nonBanko = useMemo(() => active.filter((b) => !bankoSet.has(b.eventId)), [active, bankoSet])
+  const nonBankoCount = nonBanko.length
+
+  const validSizes = useMemo(
+    () => sizes.filter((k) => k >= 1 && k <= nonBankoCount),
+    [sizes, nonBankoCount],
   )
 
-  const bedel = misli * UNIT
-  const maxWin = active.length ? bedel * totalOdd : 0
+  const totalOdd = useMemo(() => active.reduce((acc, b) => acc * b.odd, 1), [active])
+
+  const combos = useMemo(() => {
+    if (mode !== "system") return 1
+    return validSizes.reduce((acc, k) => acc + nCk(nonBankoCount, k), 0)
+  }, [mode, validSizes, nonBankoCount])
+
+  const bedel = (mode === "system" ? combos : 1) * misli * UNIT
+
+  const maxWin = useMemo(() => {
+    if (!active.length) return 0
+    if (mode !== "system") return misli * UNIT * totalOdd
+    if (combos < 1) return 0
+    const bankoProd = active
+      .filter((b) => bankoSet.has(b.eventId))
+      .reduce((a, b) => a * b.odd, 1)
+    const e = esp(nonBanko.map((b) => b.odd))
+    const sum = validSizes.reduce((acc, k) => acc + (e[k] ?? 0), 0)
+    return misli * UNIT * bankoProd * sum
+  }, [active, mode, misli, totalOdd, combos, bankoSet, nonBanko, validSizes])
 
   const isPicked = useCallback(
     (eventId: number, marketId: number, on: number) =>
-      active.some(
-        (b) =>
-          b.eventId === eventId &&
-          b.marketId === marketId &&
-          b.on === on,
-      ),
+      active.some((b) => b.eventId === eventId && b.marketId === marketId && b.on === on),
     [active],
   )
 
   const pick = useCallback((bet: Bet) => {
-    if (bet.startsAt - BETTING.cutoffLeadMs <= Date.now()) return // süresi geçmişse ekleme
+    if (bet.startsAt - BETTING.cutoffLeadMs <= Date.now()) return
     setActive((prev) => {
       const same = prev.find(
-        (b) =>
-          b.eventId === bet.eventId &&
-          b.marketId === bet.marketId &&
-          b.on === bet.on,
+        (b) => b.eventId === bet.eventId && b.marketId === bet.marketId && b.on === bet.on,
       )
-
-      // Aynı seçime tekrar tıklama => kaldır
       if (same) return prev.filter((b) => b.eventId !== bet.eventId)
-
-      // Maç başına tek bahis => eskisini sil, yeniyi en üste ekle
       return [bet, ...prev.filter((b) => b.eventId !== bet.eventId)]
     })
   }, [])
@@ -134,14 +187,28 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const clear = useCallback(() => {
-    setActive([])
+    setActive([]); setBankoIds([]); setSizes([]); setMode("combi")
   }, [])
 
   const setMisli = useCallback((n: number) => {
-    setMisliState(Number.isFinite(n) && n > 0 ? Math.floor(n) : 1)
+    const v = Number.isFinite(n) ? Math.floor(n) : 1
+    setMisliState(Math.min(Math.max(v, 1), BETTING.maxMisli))
   }, [])
 
-  // Kayıtlı kuponları sunucudan çek (tek otorite server)
+  const isBanko = useCallback((eventId: number) => bankoSet.has(eventId), [bankoSet])
+
+  const toggleBanko = useCallback((eventId: number) => {
+    setBankoIds((prev) =>
+      prev.includes(eventId) ? prev.filter((x) => x !== eventId) : [...prev, eventId],
+    )
+  }, [])
+
+  const toggleSize = useCallback((k: number) => {
+    setSizes((prev) =>
+      prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k].sort((a, b) => a - b),
+    )
+  }, [])
+
   const refreshSaved = useCallback(async () => {
     try {
       const list = await srvRequest<ServerCoupon[]>("listCoupons")
@@ -156,78 +223,59 @@ export function CouponProvider({ children }: { children: ReactNode }) {
           createdAt: c.createdAt,
           status: c.status,
           payout: c.payout,
+          betType: c.betType,
+          sizes: c.sizes,
+          combos: c.combos,
           bets: c.bets.map(toBet),
         })),
       )
     } catch {
-      /* dev/browser: sunucu yok, yoksay */
+      /* dev/browser: sunucu yok */
     }
   }, [])
 
-  // Açılışta bir kez yükle
-  useEffect(() => {
-    refreshSaved()
-  }, [refreshSaved])
+  useEffect(() => { refreshSaved() }, [refreshSaved])
 
-  // Kaydet (server otoriter) + listeyi tazele
   const save = useCallback(async () => {
     if (!active.length) return
+    const isSystem = mode === "system"
+    if (isSystem && (nonBankoCount < 2 || validSizes.length === 0)) return
     await srvRequest("placeCoupon", {
+      type: isSystem ? "system" : "combi",
       misli,
+      sizes: isSystem ? validSizes : undefined,
       bets: active.map((b) => ({
         eventId: b.eventId,
         marketId: b.marketId,
         on: b.on,
+        banko: isSystem ? bankoSet.has(b.eventId) : undefined,
       })),
     })
-    setActive([])
+    setActive([]); setBankoIds([]); setSizes([]); setMode("combi")
     await refreshSaved()
-  }, [active, misli, refreshSaved])
+  }, [active, mode, misli, validSizes, nonBankoCount, bankoSet, refreshSaved])
 
-// Sunucu-otoriter kalıcı silme (soft-delete). İyimser kaldır, hata olursa geri getir.
-const removeSaved = useCallback(async (id: string) => {
-  const prev = saved
-  setSaved((s) => s.filter((c) => c.id !== id)) // iyimser UI
-  try {
-    await srvRequest("deleteCoupon", { id })
-    await refreshSaved()
-  } catch {
-    setSaved(prev) // başarısız (ör. pending/başkasının) => geri getir
-  }
-}, [saved, refreshSaved])
+  const removeSaved = useCallback(async (id: string) => {
+    const prev = saved
+    setSaved((s) => s.filter((c) => c.id !== id))
+    try {
+      await srvRequest("deleteCoupon", { id })
+      await refreshSaved()
+    } catch {
+      setSaved(prev)
+    }
+  }, [saved, refreshSaved])
 
   const value = useMemo<CouponCtx>(
     () => ({
-      active,
-      misli,
-      saved,
-      totalOdd,
-      bedel,
-      maxWin,
-      isPicked,
-      pick,
-      remove,
-      clear,
-      setMisli,
-      save,
-      removeSaved,
-      refreshSaved,
+      active, misli, saved, totalOdd, bedel, maxWin,
+      mode, setMode, isBanko, toggleBanko, sizes, toggleSize, nonBankoCount, combos,
+      isPicked, pick, remove, clear, setMisli, save, removeSaved, refreshSaved,
     }),
     [
-      active,
-      misli,
-      saved,
-      totalOdd,
-      bedel,
-      maxWin,
-      isPicked,
-      pick,
-      remove,
-      clear,
-      setMisli,
-      save,
-      removeSaved,
-      refreshSaved,
+      active, misli, saved, totalOdd, bedel, maxWin,
+      mode, isBanko, toggleBanko, sizes, toggleSize, nonBankoCount, combos,
+      isPicked, pick, remove, clear, setMisli, save, removeSaved, refreshSaved,
     ],
   )
 

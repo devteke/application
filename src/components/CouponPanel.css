@@ -32,10 +32,19 @@
   flex: 0 0 auto;
 }
 
-.kp__title { font-weight: 800; font-size: 13px; letter-spacing: 0.06em; }
+.kp__title {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+
 .kp__count {
-  min-width: 20px; height: 20px; padding: 0 6px;
-  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(52, 211, 153, 0.18);
   color: #34d399;
   border: 1px solid rgba(52, 211, 153, 0.35);
@@ -43,6 +52,7 @@
   font-size: 12px;
   font-weight: 800;
 }
+
 .kp__odd {
   margin-left: auto;
   padding: 4px 10px;
@@ -77,19 +87,34 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.kp-bet__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.kp-bet__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .kp-bet__match {
   font-size: 12px;
   font-weight: 800;
   color: #e7e9ee;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .kp-bet__mkt {
   font-size: 12px;
   color: #9aa0ab;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.kp-bet__pick { color: #34d399; }
+
+.kp-bet__pick {
+  color: #34d399;
+}
 
 .kp-bet__odd {
   font-weight: 900;
@@ -109,7 +134,10 @@
   line-height: 1;
   cursor: pointer;
 }
-.kp-bet__x:hover { color: #e56458; }
+
+.kp-bet__x:hover {
+  color: #e56458;
+}
 
 /* Misli */
 .kp__misli {
@@ -124,21 +152,81 @@
   flex: 0 0 auto;
 }
 
-.kp__misli input {
-  width: 96px;
-  padding: 7px 8px;
-  border-radius: 8px;
+/* Misli stepper (UI uyumlu +/-) */
+.kp-stepper {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.kp-stepper__btn {
+  width: 32px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #9aa0ab;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s ease, color .12s ease;
+}
+
+.kp-stepper__btn:hover:not(:disabled) {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.kp-stepper__btn:active:not(:disabled) {
+  background: rgba(52, 211, 153, 0.28);
+}
+
+.kp-stepper__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.kp-stepper__inp {
+  width: 62px;
+  height: 34px;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
   color: #e7e9ee;
   font-size: 13px;
-  text-align: right;
+  font-weight: 700;
+  text-align: center;
   outline: none;
+
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
-.kp__misli input:focus { border-color: rgba(52, 211, 153, 0.55); }
+
+.kp-stepper__inp:focus {
+  background: rgba(52, 211, 153, 0.06);
+}
+
+/* native spinner'ları tamamen kaldır */
+.kp-stepper__inp::-webkit-outer-spin-button,
+.kp-stepper__inp::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 /* Özet */
-.kp__sum { padding: 8px 12px; background: #0b0d11; flex: 0 0 auto; }
+.kp__sum {
+  padding: 8px 12px;
+  background: #0b0d11;
+  flex: 0 0 auto;
+}
+
 .kp-row {
   display: flex;
   justify-content: space-between;
@@ -146,8 +234,16 @@
   font-size: 12.5px;
   color: #9aa0ab;
 }
-.kp-row--strong { font-weight: 800; color: #e7e9ee; }
-.kp-row--accent { font-weight: 900; color: #e08a3c; }
+
+.kp-row--strong {
+  font-weight: 800;
+  color: #e7e9ee;
+}
+
+.kp-row--accent {
+  font-weight: 900;
+  color: #e08a3c;
+}
 
 /* checkbox satırları */
 .kp__chk {
@@ -160,7 +256,10 @@
   background: #0b0d11;
   flex: 0 0 auto;
 }
-.kp__chk input { accent-color: #34d399; }
+
+.kp__chk input {
+  accent-color: #34d399;
+}
 
 /* Aksiyonlar */
 .kp__actions {
@@ -174,7 +273,9 @@
 }
 
 .kp__icon {
-  width: 40px; height: 40px; flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.04);
@@ -182,7 +283,10 @@
   font-size: 16px;
   color: #e7e9ee;
 }
-.kp__icon:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); }
+
+.kp__icon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
 
 .kp__play {
   flex: 1;
@@ -196,18 +300,126 @@
   font-size: 13px;
   cursor: pointer;
 }
-.kp__play:hover:not(:disabled) { background: rgba(52, 211, 153, 0.25); }
 
-.kp__icon:disabled, .kp__play:disabled { opacity: 0.45; cursor: default; }
+.kp__play:hover:not(:disabled) {
+  background: rgba(52, 211, 153, 0.25);
+}
+
+.kp__icon:disabled,
+.kp__play:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 
 /* NOT: Kupon SÜREKLİ AÇIK. is-collapsed gizleme kuralları yok;
    .tsx'teki "is-collapsed" class'ı kalsa bile etkisiz. */
 
 /* Scrollbar */
-.kp__list::-webkit-scrollbar { width: 8px; }
-.kp__list::-webkit-scrollbar-track { background: transparent; }
+.kp__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kp__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .kp__list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 4px;
 }
-.kp__list::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+.kp__list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+
+/* Mod seçici (Kombine / Sistem) */
+.kp__mode {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 0;
+  background: #14161b;
+  flex: 0 0 auto;
+}
+
+.kp__modebtn {
+  flex: 1;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #9aa0ab;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+
+.kp__modebtn.is-on {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.40);
+  color: #34d399;
+}
+
+/* Banko butonu (bet satırında) */
+.kp-bet__banko {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #8b909c;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.kp-bet__banko.is-on {
+  background: rgba(224, 138, 60, 0.18);
+  border-color: rgba(224, 138, 60, 0.45);
+  color: #e08a3c;
+}
+
+/* Sistem boyut seçimi */
+.kp__sys {
+  padding: 8px 12px;
+  background: #0b0d11;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+}
+
+.kp__sys-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kp__sizechip {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfd3db;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.kp__sizechip.is-on {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.40);
+  color: #34d399;
+}
+
+.kp__sys-info {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9aa0ab;
+}
+
+.kp__sys-warn {
+  color: #e08a3c;
+}

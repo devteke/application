@@ -4,13 +4,14 @@ App.Config = {
   -- Para tipi: 'cash' | 'bank' (Qbox money type)
   MoneyType        = 'bank',
 
-  -- Bahis kuralları (hepsi SERVER tarafında zorlanır)
+  -- Bahis kuralları (HEPSI server tarafında zorlanır — important.txt: client'a güvenme)
   UnitPrice        = 1,
-  MaxMisli         = 1000,
+  MaxMisli         = 20000,        -- en fazla misli
   MinSelections    = 1,
-  MaxSelections    = 20,
-  MaxOdd           = 1000.0,
-  MaxStake         = 100000,
+  MaxSelections    = 20,           -- en fazla bet adedi
+  MaxWin           = 12500000,     -- en fazla kazanç (TL) — 0 => sınırsız
+  MaxOdd           = 0,            -- toplam oran tavanı — 0 => kapalı (MaxWin devrede)
+  MaxStake         = 100000,       -- 0 => kapalı
   CutoffLeadMs     = 15 * 60 * 1000,
 
   -- Anti-flood

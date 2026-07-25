@@ -1,5 +1,6 @@
 export type BetResult = "won" | "lost" | "void" | "pending"
 export type CouponResult = "won" | "lost" | "void" | "pending"
+export type BetMode = "combi" | "system"
 
 export interface Bet {
   eventId: number
@@ -11,12 +12,13 @@ export interface Bet {
   odd: number
   startsAt: number
 
-  sbt: number          // market kategorisi: 1=MS, 92=ÇŞ, 100=Handikap, 101=Alt/Üst
-  ov: number | null    // baraj/handikap (100/101 için), yoksa null
-  statId: number       // statistics fetch id (ev.li ?? ev.i)
-  sportType: string    // "SOCCER"
+  sbt: number
+  ov: number | null
+  statId: number
+  sportType: string
 
-  result?: BetResult   // settlement sonrası sunucudan gelen maç bazlı sonuç
+  banko?: boolean      // sistem kuponunda banko mu (her kombinasyonda)
+  result?: BetResult
 }
 
 export interface SavedCoupon {
@@ -28,6 +30,10 @@ export interface SavedCoupon {
   maxWin: number
   createdAt: number
 
-  status: CouponResult // sunucu otoritesi (kazandı/kaybetti/bekliyor/iade)
-  payout: number       // sunucu otoritesi (ödenen tutar)
+  status: CouponResult
+  payout: number
+
+  betType?: BetMode    // 'combi' | 'system'
+  sizes?: number[]     // sistem boyutları (k)
+  combos?: number      // kombinasyon sayısı
 }
