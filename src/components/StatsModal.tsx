@@ -17,7 +17,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "standing", label: "Puan Durumu" },
   { key: "h2h", label: "Aralarındaki Maçlar" },
   { key: "perf", label: "Son Maçlar" },
-  { key: "missing", label: "Sakat / Cezalı" },
+  { key: "missing", label: "Sakat/Cezalı" },
   { key: "lineup", label: "İlk 11" },
   { key: "squad", label: "Kadro" },
 ]
@@ -111,16 +111,20 @@ export default function StatsModal({ matchId, title, onClose }: { matchId: numbe
               <button className="stx__retry" onClick={() => setTick((n) => n + 1)}>Tekrar dene</button>
             </div>
           )}
-          {!st?.loading && !st?.error && st?.data != null && (
-            <>
-              {active === "genel" && <GenelView d={st.data as SummariesData} />}
-              {active === "standing" && <StandingView d={st.data as StandingData} />}
-              {active === "h2h" && <H2HView d={st.data as HeadToHeadData} home={homeName} away={awayName} />}
-              {active === "perf" && <PerfView d={st.data as PerformanceData} home={homeName} away={awayName} />}
-              {active === "missing" && <MissingView d={st.data as MissingPlayersData} home={homeName} away={awayName} />}
-              {active === "lineup" && <LineupView d={st.data as LineupsData} />}
-              {active === "squad" && <SquadView d={st.data as SquadData} home={homeName} away={awayName} />}
-            </>
+          {!st?.loading && !st?.error && (
+            st?.data == null ? (
+              <div className="stx__empty">Veri yok</div>
+            ) : (
+              <>
+                {active === "genel" && <GenelView d={st.data as SummariesData} />}
+                {active === "standing" && <StandingView d={st.data as StandingData} />}
+                {active === "h2h" && <H2HView d={st.data as HeadToHeadData} home={homeName} away={awayName} />}
+                {active === "perf" && <PerfView d={st.data as PerformanceData} home={homeName} away={awayName} />}
+                {active === "missing" && <MissingView d={st.data as MissingPlayersData} home={homeName} away={awayName} />}
+                {active === "lineup" && <LineupView d={st.data as LineupsData} />}
+                {active === "squad" && <SquadView d={st.data as SquadData} home={homeName} away={awayName} />}
+              </>
+            )
           )}
         </div>
       </div>
@@ -270,8 +274,8 @@ function MiniStanding({ rows }: { rows: StandingSideRow[] }) {
     <table className="sttab">
       <thead><tr><th>#</th><th className="sttab__name">Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>P</th></tr></thead>
       <tbody>
-        {rows.map((t) => (
-          <tr key={t.team.id}>
+        {rows.map((t, i) => (
+          <tr key={`${i}-${t.team.id}`}>
             <td>{t.position}</td>
             <td className="sttab__name">{t.team.teamName}</td>
             <td>{t.played}</td><td>{t.won}</td><td>{t.draw}</td><td>{t.lost}</td>
@@ -317,31 +321,27 @@ function StandingView({ d }: { d: StandingData }) {
         ))}
       </div>
       <div className="stc__head">{t.name}</div>
-      <table className="sttab">
-        <thead>
-          <tr>
-            <th>#</th><th className="sttab__name">Takım</th>
-            <th>O</th><th>G</th><th>B</th><th>M</th><th>A</th><th>Y</th><th>P</th>
-            {side === "OVERALL" && <th>Form</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((t2) => (
-            <tr key={t2.team.id} className={hi.has(t2.team.id) ? "is-hl" : ""}>
-              <td>{t2.position}</td>
-              <td className="sttab__name">{t2.team.teamName}</td>
-              <td>{t2.played}</td><td>{t2.won}</td><td>{t2.draw}</td><td>{t2.lost}</td>
-              <td>{t2.scored}</td><td>{t2.against}</td>
-              <td className="sttab__p">{t2.points}</td>
-              {side === "OVERALL" && (
-                <td className="sttab__form">
-                  {(t2.form ?? []).slice(-5).map((f, i) => <FormChip key={i} r={f === "W" ? "W" : f === "L" ? "L" : "D"} />)}
-                </td>
-              )}
+      {rows.length ? (
+        <table className="sttab">
+          <thead>
+            <tr>
+              <th>#</th><th className="sttab__name">Takım</th>
+              <th>O</th><th>G</th><th>B</th><th>M</th><th>A</th><th>Y</th><th>P</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((t2, i) => (
+              <tr key={`${side}-${i}-${t2.team.id}`} className={t2.team.id && hi.has(t2.team.id) ? "is-hl" : ""}>
+                <td>{t2.position}</td>
+                <td className="sttab__name">{t2.team.teamName}</td>
+                <td>{t2.played}</td><td>{t2.won}</td><td>{t2.draw}</td><td>{t2.lost}</td>
+                <td>{t2.scored}</td><td>{t2.against}</td>
+                <td className="sttab__p">{t2.points}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : <Empty />}
     </div>
   )
 }
