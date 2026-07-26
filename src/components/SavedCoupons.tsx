@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { useCoupon } from "../context/CouponContext"
-import type { BetMode, BetResult, CouponResult } from "../types/coupon"
+import type { BetMode, BetResult, CouponResult, SavedCoupon } from "../types/coupon"
 import "./SavedCoupons.css"
 
 const COUPON_LABEL: Record<CouponResult, string> = {
@@ -17,7 +18,6 @@ const BET_LABEL: Record<BetResult, string> = {
   pending: "Bekliyor",
 }
 
-// --- SavedCoupons filtre seçenekleri ---
 type StatusFilter = "all" | CouponResult
 type TypeFilter = "all" | BetMode
 type SortFilter = "new" | "old"
@@ -36,20 +36,19 @@ const TYPE_TABS: { k: TypeFilter; label: string }[] = [
   { k: "system", label: "Sistem" },
 ]
 
-const metaText = (c: {
-  betType?: string
-  sizes?: number[]
-  bets: unknown[]
-  totalOdd: number
-}) =>
-  c.betType === "system"
-    ? `Sistem ${(c.sizes ?? []).join("/")} · ${c.bets.length} maç`
-    : `${c.bets.length} maç · ${c.totalOdd.toFixed(2)}`
+const nf = new Intl.NumberFormat("tr-TR")
+const money = (n: number) => nf.format(Math.round(n))
 
 function StatusBadge({ result }: { result: CouponResult }) {
   return (
     <span className={`sk-badge sk-badge--${result}`}>{COUPON_LABEL[result]}</span>
   )
+}
+
+function metaText(c: SavedCoupon) {
+  return c.betType === "system"
+    ? `Sistem ${(c.sizes ?? []).join("/")} · ${c.bets.length} maç`
+    : `${c.bets.length} maç · ${c.totalOdd.toFixed(2)}`
 }
 
 export default function SavedCoupons({
@@ -62,24 +61,22 @@ export default function SavedCoupons({
   const { saved, removeSaved, refreshSaved } = useCoupon()
   const [openId, setOpenId] = useState<string | null>(null)
 
-  // Filtre state'i
+  // filtreler
   const [fStatus, setFStatus] = useState<StatusFilter>("all")
   const [fType, setFType] = useState<TypeFilter>("all")
   const [fSort, setFSort] = useState<SortFilter>("new")
 
-  // Panel her açıldığında sunucudan güncel listeyi çek
   useEffect(() => {
     refreshSaved()
   }, [refreshSaved])
 
-  // Kupon numarası orijinal sıradan sabit kalsın (filtre/sıralamadan etkilenmesin)
+  // Kupon numarası orijinal sıradan sabit
   const numberOf = useMemo(() => {
     const m = new Map<string, number>()
     saved.forEach((c, i) => m.set(c.id, saved.length - i))
     return m
   }, [saved])
 
-  // Filtre + sıralama uygulanmış görünen liste
   const shown = useMemo(() => {
     const arr = saved.filter(
       (c) =>
@@ -92,6 +89,85 @@ export default function SavedCoupons({
   }, [saved, fStatus, fType, fSort])
 
   const openCoupon = saved.find((c) => c.id === openId) ?? null
+
+  // --- Sanal liste (MatchList ile aynı yaklaşım): scroll konteyneri .tablet__pageBody ---
+  const listElRef = useRef<HTMLDivElement | null>(null)
+  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  const setListNode = useCallback((node: HTMLDivElement | null) => {
+    listElRef.current = node
+    if (!node) return
+    const sc = node.closest(".tablet__pageBody") as HTMLElement | null
+    setScrollEl(sc)
+    if (sc) {
+      const margin =
+        node.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop
+      setScrollMargin(margin)
+    }
+  }, [])
+
+  const virtualizer = useVirtualizer({
+    count: shown.length,
+    getScrollElement: () => scrollEl,
+    estimateSize: () => 100,
+    overscan: 8,
+    scrollMargin,
+    getItemKey: (i) => shown[i].id,
+  })
+
+  // --- Kart render (hem sanal listede hem standalone'da kullanılır) ---
+  const renderCard = (c: SavedCoupon) => {
+    const dateStr = new Date(c.createdAt).toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    const isSystem = c.betType === "system"
+    const winLabel = c.status === "won" ? "Kazanç" : "Maks. Kazanç"
+    const winVal = c.status === "won" ? c.payout : c.maxWin
+
+    return (
+      <button className={`skc2 skc2--${c.status}`} onClick={() => setOpenId(c.id)}>
+        <span className="skc2__accent" />
+
+        <div className="skc2__main">
+          <div className="skc2__row skc2__row--top">
+            <span className="skc2__no">#{numberOf.get(c.id)}</span>
+            <span className={`skc2__type skc2__type--${isSystem ? "system" : "combi"}`}>
+              {isSystem ? `Sistem ${(c.sizes ?? []).join("/")}` : "Kombine"}
+            </span>
+            <StatusBadge result={c.status} />
+          </div>
+
+          <div className="skc2__row skc2__row--mid">
+            <span className="skc2__stat">
+              <span className="skc2__k">Maç</span>
+              <span className="skc2__v">{c.bets.length}</span>
+            </span>
+            <span className="skc2__stat">
+              <span className="skc2__k">Toplam Oran</span>
+              <span className="skc2__v">{c.totalOdd.toFixed(2)}</span>
+            </span>
+            <span className="skc2__stat">
+              <span className="skc2__k">Bedel</span>
+              <span className="skc2__v">{money(c.bedel)} TL</span>
+            </span>
+            <span className="skc2__stat skc2__stat--win">
+              <span className="skc2__k">{winLabel}</span>
+              <span className="skc2__v">{money(winVal)} TL</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="skc2__side">
+          <span className="skc2__date">{dateStr}</span>
+          <span className="skc2__go">›</span>
+        </div>
+      </button>
+    )
+  }
 
   const filterBar = (
     <div className="sk-filters">
@@ -131,47 +207,20 @@ export default function SavedCoupons({
     </div>
   )
 
-  const cards = (
-    <>
-      {saved.length === 0 ? (
-        <div className="sk__empty">Henüz kayıtlı kupon yok.</div>
-      ) : shown.length === 0 ? (
-        <div className="sk__empty">Bu filtreye uygun kupon yok.</div>
-      ) : (
-        shown.map((c) => {
-          const time = new Date(c.createdAt).toLocaleTimeString("tr-TR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-
-          return (
-            <div className={`skc skc--${c.status}`} key={c.id}>
-              <button className="skc__head" onClick={() => setOpenId(c.id)}>
-                <span className="skc__title">Kupon #{numberOf.get(c.id)}</span>
-                <span className="skc__meta">{metaText(c)}</span>
-                <StatusBadge result={c.status} />
-                <span className="skc__time">{time}</span>
-                <span className="skc__go">›</span>
-              </button>
-            </div>
-          )
-        })
-      )}
-    </>
-  )
+  const emptyState =
+    saved.length === 0 ? (
+      <div className="sk__empty">Henüz kayıtlı kupon yok.</div>
+    ) : shown.length === 0 ? (
+      <div className="sk__empty">Bu filtreye uygun kupon yok.</div>
+    ) : null
 
   const modal = openCoupon && (
     <div className="sk__overlay" onClick={() => setOpenId(null)}>
       <div className="sk-modal" onClick={(e) => e.stopPropagation()}>
         <header className="sk-modal__head">
-          <span className="sk-modal__title">
-            Kupon #{numberOf.get(openCoupon.id)}
-          </span>
-
+          <span className="sk-modal__title">Kupon #{numberOf.get(openCoupon.id)}</span>
           <span className="sk-modal__meta">{metaText(openCoupon)}</span>
-
           <StatusBadge result={openCoupon.status} />
-
           <button
             className="sk-modal__close"
             onClick={() => setOpenId(null)}
@@ -184,7 +233,6 @@ export default function SavedCoupons({
         <div className="sk-modal__body">
           {openCoupon.bets.map((b) => {
             const r: BetResult = b.result ?? "pending"
-
             return (
               <div className={`skc-bet skc-bet--${r}`} key={b.eventId}>
                 <span className="skc-bet__match">{b.eventName}</span>
@@ -192,9 +240,7 @@ export default function SavedCoupons({
                   {b.marketName} : <b>{b.pick}</b>
                 </span>
                 <span className="skc-bet__odd">{b.odd.toFixed(2)}</span>
-                <span className={`skc-bet__res skc-bet__res--${r}`}>
-                  {BET_LABEL[r]}
-                </span>
+                <span className={`skc-bet__res skc-bet__res--${r}`}>{BET_LABEL[r]}</span>
               </div>
             )
           })}
@@ -242,7 +288,34 @@ export default function SavedCoupons({
         {filterBar}
 
         <div className="tablet__pageBody">
-          <div className="sk__list">{cards}</div>
+          {emptyState ?? (
+            <div
+              ref={setListNode}
+              className="sk__vlist"
+              style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+            >
+              {virtualizer.getVirtualItems().map((vi) => {
+                const c = shown[vi.index]
+                return (
+                  <div
+                    key={c.id}
+                    data-index={vi.index}
+                    ref={virtualizer.measureElement}
+                    className="sk__vitem"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${vi.start - scrollMargin}px)`,
+                    }}
+                  >
+                    {renderCard(c)}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {modal}
@@ -259,7 +332,9 @@ export default function SavedCoupons({
 
       {filterBar}
 
-      <div className="sk__list">{cards}</div>
+      <div className="sk__list sk__list--plain">
+        {emptyState ?? shown.map((c) => <div key={c.id}>{renderCard(c)}</div>)}
+      </div>
 
       {modal}
     </aside>
