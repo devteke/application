@@ -13,6 +13,7 @@ export interface Cell {
 
 export interface MatchRowVM {
   id: number
+  statId: number
   time: string
   leagueCode: string
   dayShort: string
@@ -177,6 +178,7 @@ function buildRow(ev: SbEvent, leagueMap?: LeagueMap): MatchRowVM {
 
   return {
     id: ev.i,
+    statId: statIdOf(ev),
     time: `${p.hh}:${p.mm}`,
     leagueCode: leagueMap?.get(ev.cp)?.code || ev.ct || String(ev.cp),
     dayShort: dayShortLabel(ev.d),

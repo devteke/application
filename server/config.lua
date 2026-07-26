@@ -29,6 +29,7 @@ App.Config = {
 }
 
 App.ApiBase    = GetConvar('app_api_base', '')
+App.AggrBase   = GetConvar('app_aggr_base', '')
 App.ApiHeaders = {
   ['Referer']    = GetConvar('app_api_referer', ''),
   ['Origin']     = GetConvar('app_api_origin', ''),

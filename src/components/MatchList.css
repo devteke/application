@@ -245,3 +245,13 @@
 .tablet__content {
   position: relative;
 }
+
+/* İstatistik butonu (MBS yanında) */
+.mr-stat {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04);
+  color: #9aa0ab; cursor: pointer; flex: 0 0 auto; transition: background .12s, color .12s, border-color .12s;
+}
+.mr-stat:hover { background: rgba(52, 211, 153, 0.14); border-color: rgba(52, 211, 153, 0.4); color: #34d399; }
+.mr-stat svg { display: block; }

@@ -4,6 +4,7 @@ import { useFilters } from "../context/FiltersContext"
 import type { MatchRowVM, Cell, SortMode } from "../utils/mapEvents"
 import { useCoupon } from "../context/CouponContext"
 import MatchDetail from "./MatchDetail"
+import StatsModal from "./StatsModal"
 import "./MatchList.css"
 
 type ListItem =
@@ -13,8 +14,8 @@ type ListItem =
 export default function MatchList() {
   const { groups, loading, error, sort } = useFilters()
   const [openId, setOpenId] = useState<number | null>(null)
+  const [stats, setStats] = useState<{ id: number; name: string } | null>(null)
 
-  // Grupları tek düz listeye çevir (başlık + satırlar)
   const items = useMemo<ListItem[]>(() => {
     const out: ListItem[] = []
     for (const g of groups) {
@@ -24,8 +25,6 @@ export default function MatchList() {
     return out
   }, [groups])
 
-  // Scroll konteyneri: .tablet__content
-  // Scroll konteyneri (.tablet__content) — callback ref ile .ml mount olunca yakalanır
   const listElRef = useRef<HTMLDivElement | null>(null)
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
@@ -58,49 +57,56 @@ export default function MatchList() {
   const vItems = virtualizer.getVirtualItems()
 
   return (
-    <div
-      ref={setListNode}
-      className="ml"
-      style={{ height: virtualizer.getTotalSize(), position: "relative" }}
-    >
-      {vItems.map((vi) => {
-        const item = items[vi.index]
-        return (
-          <div
-            key={item.key}
-            data-index={vi.index}
-            ref={virtualizer.measureElement}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${vi.start - scrollMargin}px)`,
-            }}
-          >
-            {item.kind === "header" ? (
-              <div className="ml-daybar">{item.label}</div>
-            ) : (
-              <>
-                <MatchRow
-                  r={item.r}
-                  sort={sort}
-                  open={openId === item.r.id}
-                  onToggle={() => setOpenId((o) => (o === item.r.id ? null : item.r.id))}
-                />
-                {openId === item.r.id && <MatchDetail id={item.r.id} />}
-              </>
-            )}
-          </div>
-        )
-      })}
-    </div>
+    <>
+      <div
+        ref={setListNode}
+        className="ml"
+        style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+      >
+        {vItems.map((vi) => {
+          const item = items[vi.index]
+          return (
+            <div
+              key={item.key}
+              data-index={vi.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${vi.start - scrollMargin}px)`,
+              }}
+            >
+              {item.kind === "header" ? (
+                <div className="ml-daybar">{item.label}</div>
+              ) : (
+                <>
+                  <MatchRow
+                    r={item.r}
+                    sort={sort}
+                    open={openId === item.r.id}
+                    onToggle={() => setOpenId((o) => (o === item.r.id ? null : item.r.id))}
+                    onStats={() => setStats({ id: item.r.statId, name: item.r.name })}
+                  />
+                  {openId === item.r.id && <MatchDetail id={item.r.id} />}
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {stats && (
+        <StatsModal matchId={stats.id} title={stats.name} onClose={() => setStats(null)} />
+      )}
+    </>
   )
 }
 
 function MatchRow({
-  r, sort, open, onToggle,
-}: { r: MatchRowVM; sort: SortMode; open: boolean; onToggle: () => void }) {
+  r, sort, open, onToggle, onStats,
+}: { r: MatchRowVM; sort: SortMode; open: boolean; onToggle: () => void; onStats: () => void }) {
   const topLabel = sort === "league" ? r.dayShort : r.time
   const subLabel = sort === "league" ? r.time : r.leagueCode
   return (
@@ -114,6 +120,17 @@ function MatchRow({
         <span className="mr-icons">
           {r.live && <span className="mr-ic mr-ic--live">●</span>}
           {r.mbs != null && <span className="mr-mbs">{r.mbs}</span>}
+          <button
+            className="mr-stat"
+            title="İstatistikler"
+            onClick={(e) => { e.stopPropagation(); onStats() }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="11" width="4" height="9" rx="1" fill="currentColor" />
+              <rect x="10" y="6" width="4" height="14" rx="1" fill="currentColor" />
+              <rect x="17" y="3" width="4" height="17" rx="1" fill="currentColor" />
+            </svg>
+          </button>
         </span>
       </div>
 

@@ -49,6 +49,7 @@ local ALLOWED = {
   '/api/web/v1/sportsbook/',
   '/api/web/v2/sportsbook/',
   '/api/web/v1/statistics/',
+  '/api/web/match-stats/',
 }
 
 local function pathOk(p)
@@ -76,7 +77,7 @@ local function allowApi(src)
   return true
 end
 
-RegisterNetEvent('app:apiGet', function(reqId, path)
+RegisterNetEvent('app:apiGet', function(reqId, path, base)
   local src = source
   if type(reqId) ~= 'number' or type(path) ~= 'string' or not pathOk(path) then
     TriggerClientEvent('app:apiResult', src, reqId, false, 'forbidden_path')
@@ -86,7 +87,14 @@ RegisterNetEvent('app:apiGet', function(reqId, path)
     TriggerClientEvent('app:apiResult', src, reqId, false, 'rate_limited')
     return
   end
-  PerformHttpRequest(App.ApiBase .. path, function(status, body)
+  local root = App.ApiBase
+  if base == 'aggr' then root = App.AggrBase end
+  if not root or root == '' then
+    App.log('warn', ('apiGet base=%s yapılandırılmamış (path=%s)'):format(tostring(base), path))
+    TriggerClientEvent('app:apiResult', src, reqId, false, 'http_error')
+    return
+  end
+  PerformHttpRequest(root .. path, function(status, body)
     if status ~= 200 then
       App.log('warn', ('apiGet status=%s path=%s'):format(tostring(status), path))
     end

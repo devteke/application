@@ -67,16 +67,12 @@ end)
 
 RegisterNUICallback('apiGet', function(data, cb)
     if type(data) ~= 'table' or type(data.path) ~= 'string' or type(data.reqId) ~= 'number' then
-        cb({
-            ok = false,
-            error = 'invalid_input'
-        })
+        cb({ ok = false, error = 'invalid_input' })
         return
     end
-    TriggerServerEvent('app:apiGet', data.reqId, data.path)
-    cb({
-        ok = true
-    }) -- isteği aldık; sonuç event ile dönecek
+    local base = (type(data.base) == 'string') and data.base or 'api'
+    TriggerServerEvent('app:apiGet', data.reqId, data.path, base)
+    cb({ ok = true })
 end)
 
 RegisterNetEvent('app:apiResult', function(reqId, ok, body)

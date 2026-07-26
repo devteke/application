@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './', 
+  base: './',
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] })
@@ -25,6 +25,15 @@ export default defineConfig({
         headers: {
           Referer: 'https://www.nesine.com/',
           Origin: 'https://www.nesine.com',
+        },
+      },
+      '/misliaggr': {
+        target: 'https://aggr.misli.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/misliaggr/, ''),
+        headers: {
+          Referer: 'https://www.misli.com/',
+          Origin: 'https://www.misli.com',
         },
       },
       '/misli': {

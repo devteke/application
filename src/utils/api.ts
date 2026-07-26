@@ -1,7 +1,10 @@
 import { fetchNui } from "./fetchNui"
 import { isEnvBrowser } from "./misc"
 
-const DEV_PREFIX = "/misli" // dev'de Vite proxy; FiveM'de kullanılmaz
+const DEV_PREFIX = "/misli"          // apivx (dev Vite proxy)
+const DEV_PREFIX_AGGR = "/misliaggr" // aggr  (dev Vite proxy)
+
+export type ApiBase = "api" | "aggr"
 
 type Pending = { resolve: (v: unknown) => void; reject: (e: unknown) => void }
 const pending = new Map<number, Pending>()
@@ -24,10 +27,11 @@ function ensureListener() {
   })
 }
 
-/** GET. path daima "/api/..." ile başlar (base'siz). */
-export async function apiGet<T>(path: string): Promise<T> {
+/** GET. path daima "/api/..." ile başlar (base'siz). base="aggr" -> aggr.misli.com */
+export async function apiGet<T>(path: string, base: ApiBase = "api"): Promise<T> {
   if (isEnvBrowser()) {
-    const r = await fetch(DEV_PREFIX + path, { headers: { Accept: "application/json" } })
+    const prefix = base === "aggr" ? DEV_PREFIX_AGGR : DEV_PREFIX
+    const r = await fetch(prefix + path, { headers: { Accept: "application/json" } })
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     return (await r.json()) as T
   }
@@ -37,7 +41,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     pending.set(reqId, { resolve: resolve as (v: unknown) => void, reject })
     setTimeout(() => { if (pending.delete(reqId)) reject(new Error("timeout")) }, 15000)
   })
-  await fetchNui("apiGet", { reqId, path })
+  await fetchNui("apiGet", { reqId, path, base })
   return promise
 }
 
