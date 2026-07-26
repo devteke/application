@@ -279,12 +279,104 @@
   background: #0b0d11;
 }
 
-.sk-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-.sk-badge--won     { background: #10391f; color: #35d07f; }
-.sk-badge--lost    { background: #3a1414; color: #ff6b6b; }
-.sk-badge--pending { background: #33321a; color: #e6c34a; }
+.sk-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
 
-.skc-bet__res--won     { color: #35d07f; }
-.skc-bet__res--lost    { color: #ff6b6b; }
-.skc-bet__res--void    { color: #9aa4b2; }
-.skc-bet__res--pending { color: #e6c34a; }
+.sk-badge--won {
+  background: #10391f;
+  color: #35d07f;
+}
+
+.sk-badge--lost {
+  background: #3a1414;
+  color: #ff6b6b;
+}
+
+.sk-badge--pending {
+  background: #33321a;
+  color: #e6c34a;
+}
+
+.skc-bet__res--won {
+  color: #35d07f;
+}
+
+.skc-bet__res--lost {
+  color: #ff6b6b;
+}
+
+.skc-bet__res--void {
+  color: #9aa4b2;
+}
+
+.skc-bet__res--pending {
+  color: #e6c34a;
+}
+
+/* === SavedCoupons filtre çubuğu === */
+.sk-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #0f1116;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sk-fgroup {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sk-fchip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9aa0ab;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.sk-fchip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e7e9ee;
+}
+
+.sk-fchip.is-active {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+.sk-fdiv {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.10);
+  margin: 0 2px;
+}
+
+.sk-fsort {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.03);
+  color: #cdd2db;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sk-fsort:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e7e9ee;
+}

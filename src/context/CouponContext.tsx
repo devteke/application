@@ -11,6 +11,8 @@ import type { Bet, BetMode, SavedCoupon } from "../types/coupon"
 import { useCutoffTick } from "../hooks/useCutoffTick"
 import { BETTING } from "../config/betting"
 import { srvRequest } from "../utils/api"
+import { useToast } from "../context/ToastContext"
+import { errorMessage } from "../utils/errors"
 
 const UNIT = 1 // 1 misli = 1 TL
 
@@ -114,7 +116,9 @@ const toBet = (b: ServerBet): Bet => ({
 })
 
 export function CouponProvider({ children }: { children: ReactNode }) {
+  const { notify } = useToast()
   const [active, setActive] = useState<Bet[]>([])
+
   const [misli, setMisliState] = useState(1)
   const [saved, setSaved] = useState<SavedCoupon[]>([])
   const [mode, setMode] = useState<BetMode>("combi")
@@ -277,9 +281,10 @@ export function CouponProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { refreshSaved() }, [refreshSaved])
 
-  const save = useCallback(async () => {
-    if (invalid) return
-    const isSystem = mode === "system"
+const save = useCallback(async () => {
+  if (invalid) return
+  const isSystem = mode === "system"
+  try {
     await srvRequest("placeCoupon", {
       type: isSystem ? "system" : "combi",
       misli,
@@ -291,20 +296,26 @@ export function CouponProvider({ children }: { children: ReactNode }) {
         banko: isSystem ? bankoSet.has(b.eventId) : undefined,
       })),
     })
+    notify("Kupon oynandı ✓", "success")
     setActive([]); setBankoIds([]); setSizes([]); setMode("combi")
     await refreshSaved()
-  }, [active, mode, misli, validSizes, invalid, bankoSet, refreshSaved])
+  } catch (e) {
+    notify(errorMessage(e), "error")   // rate_limited / insufficient_funds / mbs_not_met…
+  }
+}, [active, mode, misli, validSizes, invalid, bankoSet, notify, refreshSaved])
 
-  const removeSaved = useCallback(async (id: string) => {
-    const prev = saved
-    setSaved((s) => s.filter((c) => c.id !== id))
-    try {
-      await srvRequest("deleteCoupon", { id })
-      await refreshSaved()
-    } catch {
-      setSaved(prev)
-    }
-  }, [saved, refreshSaved])
+const removeSaved = useCallback(async (id: string) => {
+  const prev = saved
+  setSaved((s) => s.filter((c) => c.id !== id))
+  try {
+    await srvRequest("deleteCoupon", { id })
+    notify("Kupon silindi", "info")
+    await refreshSaved()
+  } catch (e) {
+    setSaved(prev)                      // optimistic geri al
+    notify(errorMessage(e), "error")    // not_deletable…
+  }
+}, [saved, notify, refreshSaved])
 
   const value = useMemo<CouponCtx>(
     () => ({

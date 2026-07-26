@@ -12,6 +12,8 @@ import { CouponProvider } from './context/CouponContext'
 import SavedCoupons from './components/SavedCoupons'
 import CouponPanel from './components/CouponPanel'
 import { FiltersProvider } from './context/FiltersContext'
+import { ToastProvider } from './context/ToastContext'
+import ToastHost from './components/Toast'
 debugData<boolean>([{ action: 'setVisible', data: true }])
 
 export default function App() {
@@ -32,40 +34,50 @@ export default function App() {
 
   if (!visible) return null
 
+  const isMarkets = view === 'markets'
+
   return (
-    <CouponProvider>
-      <div className="tablet-stage">
-        <div className="tablet-wrap">
-          <div className="tablet">
-            <div className="tablet__screen">
-              <FiltersProvider>
-                <LeftMenu
-                  onOpenSavedCoupons={() => setView('savedCoupons')}
-                  onOpenMarkets={() => setView('markets')}
-                />
+    <ToastProvider>
+      <CouponProvider>
+        <div className="tablet-stage">
+          <div className="tablet-wrap">
+            <div className="tablet">
+              <div className="tablet__screen">
+                <FiltersProvider>
+                  <LeftMenu
+                    onOpenSavedCoupons={() => setView('savedCoupons')}
+                    onOpenMarkets={() => setView('markets')}
+                  />
 
-                <div className="tablet__main">
-                  <TopBar />
+                  <div className="tablet__main">
+                    {/* Maç listesi filtreleri yalnızca bültende */}
+                    {isMarkets && <TopBar />}
 
-                  <div className="tablet__content">
-                    {view === 'markets' ? (
-                      <>
-                        <MarketBar />
-                        <MatchList />
-                      </>
-                    ) : (
-                      <SavedCoupons embedded onBack={() => setView('markets')} />
-                    )}
+                    <div
+                      className={
+                        'tablet__content' + (isMarkets ? '' : ' tablet__content--page')
+                      }
+                    >
+                      {isMarkets ? (
+                        <>
+                          <MarketBar />
+                          <MatchList />
+                        </>
+                      ) : (
+                        <SavedCoupons embedded onBack={() => setView('markets')} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              </FiltersProvider>
+                </FiltersProvider>
+              </div>
             </div>
+
+            <CouponPanel />
           </div>
-
-
-          <CouponPanel />
         </div>
-      </div>
-    </CouponProvider>
+
+        <ToastHost />
+      </CouponProvider>
+    </ToastProvider>
   )
 }

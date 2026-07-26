@@ -96,9 +96,9 @@ export default function CouponPanel() {
       </div>
 
       <div className="kp__sum">
-        <div className="kp-row"><span>Kupon Bedeli</span><span>{bedel.toFixed(2)} TL</span></div>
+        <div className="kp-row"><span>Kupon Bedeli</span><span>{bedel.toFixed(2)} $</span></div>
         <div className="kp-row kp-row--strong"><span>{isSystem ? "Kombinasyon" : "Toplam Oran"}</span><span>{empty ? "-" : isSystem ? combos : totalOdd.toFixed(2)}</span></div>
-        <div className="kp-row kp-row--accent"><span>Maksimum Kazanç</span><span>{maxWin.toFixed(2)} TL</span></div>
+        <div className="kp-row kp-row--accent"><span>Maksimum Kazanç</span><span>{maxWin.toFixed(2)} $</span></div>
       </div>
 
       <label className="kp__chk"><input type="checkbox" defaultChecked /> Tüm oran değişikliklerini kabul et</label>
