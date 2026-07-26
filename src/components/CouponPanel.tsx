@@ -6,13 +6,12 @@ export default function CouponPanel() {
   const {
     active, misli, totalOdd, bedel, maxWin, remove, clear, setMisli, save,
     mode, setMode, isBanko, toggleBanko, sizes, toggleSize, nonBankoCount, combos,
+    availableSizes, mbsWarn, invalid,
   } = useCoupon()
 
   const empty = active.length === 0
   const isSystem = mode === "system"
-  const validSizes = sizes.filter((k) => k >= 1 && k <= nonBankoCount)
-  const sysInvalid = isSystem && (nonBankoCount < 2 || validSizes.length === 0)
-  const canPlay = !empty && !sysInvalid
+  const canPlay = !empty && !invalid
 
   return (
     <aside className={`kp${empty ? " is-collapsed" : ""}`}>
@@ -39,7 +38,10 @@ export default function CouponPanel() {
               >B</button>
             )}
             <div className="kp-bet__main">
-              <span className="kp-bet__match">{b.eventName}</span>
+              <span className="kp-bet__match">
+                {b.eventName}
+                {b.mbs && b.mbs > 1 ? <span className="kp-bet__mbs">MBS {b.mbs}</span> : null}
+              </span>
               <span className="kp-bet__mkt">
                 {b.marketName} : <b className="kp-bet__pick">{b.pick}</b>
               </span>
@@ -53,22 +55,29 @@ export default function CouponPanel() {
       {isSystem && !empty && (
         <div className="kp__sys">
           <div className="kp__sys-row">
-            {Array.from({ length: nonBankoCount }, (_, i) => i + 1).map((k) => (
-              <button
-                key={k}
-                className={`kp__sizechip${sizes.includes(k) ? " is-on" : ""}`}
-                onClick={() => toggleSize(k)}
-              >{k}</button>
-            ))}
+            {Array.from({ length: nonBankoCount }, (_, i) => i + 1).map((k) => {
+              const ok = availableSizes.includes(k)
+              return (
+                <button
+                  key={k}
+                  className={`kp__sizechip${sizes.includes(k) ? " is-on" : ""}`}
+                  disabled={!ok}
+                  title={ok ? undefined : "Bu boyut MBS nedeniyle oynanamaz"}
+                  onClick={() => toggleSize(k)}
+                >{k}</button>
+              )
+            })}
           </div>
           <div className="kp__sys-info">
-            {nonBankoCount < 2
-              ? <span className="kp__sys-warn">Sistem için en az 2 banko-dışı maç gerekir</span>
-              : validSizes.length === 0
-                ? <span className="kp__sys-warn">Bir sistem boyutu seçin</span>
-                : <span>{combos} kombinasyon</span>}
+            {mbsWarn
+              ? <span className="kp__sys-warn">{mbsWarn}</span>
+              : <span>{combos} kombinasyon</span>}
           </div>
         </div>
+      )}
+
+      {!isSystem && !empty && mbsWarn && (
+        <div className="kp__sys"><div className="kp__sys-info"><span className="kp__sys-warn">{mbsWarn}</span></div></div>
       )}
 
       <div className="kp__misli">

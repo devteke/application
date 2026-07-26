@@ -14,6 +14,8 @@ import { srvRequest } from "../utils/api"
 
 const UNIT = 1 // 1 misli = 1 TL
 
+const mbsOf = (b: Bet) => b.mbs ?? 1
+
 // --- kombinatorik yardımcıları (server ile birebir) ---
 function esp(odds: number[]): number[] {
   const e = [1]
@@ -45,6 +47,9 @@ interface CouponCtx {
   toggleSize: (k: number) => void
   nonBankoCount: number
   combos: number
+  availableSizes: number[]   // MBS'e göre seçilebilir k'ler
+  mbsWarn: string            // MBS uyarısı (boşsa sorun yok)
+  invalid: boolean           // kaydet/oyna kilidi
   // aksiyonlar
   isPicked: (eventId: number, marketId: number, on: number) => boolean
   pick: (bet: Bet) => void
@@ -71,6 +76,7 @@ type ServerBet = {
   pick: string
   odd: number
   sportType: string
+  mbs?: number | null
   banko?: boolean
   result?: Bet["result"]
 }
@@ -102,6 +108,7 @@ const toBet = (b: ServerBet): Bet => ({
   ov: b.ov,
   statId: b.statId,
   sportType: b.sportType,
+  mbs: b.mbs ?? null,
   banko: b.banko,
   result: b.result,
 })
@@ -136,34 +143,68 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   }, [active])
 
   const bankoSet = useMemo(() => new Set(bankoIds), [bankoIds])
+  const bankoList = useMemo(() => active.filter((b) => bankoSet.has(b.eventId)), [active, bankoSet])
   const nonBanko = useMemo(() => active.filter((b) => !bankoSet.has(b.eventId)), [active, bankoSet])
   const nonBankoCount = nonBanko.length
-
-  const validSizes = useMemo(
-    () => sizes.filter((k) => k >= 1 && k <= nonBankoCount),
-    [sizes, nonBankoCount],
-  )
+  const B = bankoList.length
 
   const totalOdd = useMemo(() => active.reduce((acc, b) => acc * b.odd, 1), [active])
 
+  // KOMBİNE: her bacak mbs<=N olmalı
+  const combiMbsOk = useMemo(
+    () => active.length === 0 || active.every((b) => mbsOf(b) <= active.length),
+    [active],
+  )
+
+  // SİSTEM: bir k boyutu geçerli mi? (T=B+k). combos ve e[k]'yi de döndürür.
+  const sysAtSize = useCallback(
+    (k: number) => {
+      const T = B + k
+      if (!bankoList.every((b) => mbsOf(b) <= T)) return { valid: false, combos: 0, ek: 0 }
+      const elig = nonBanko.filter((b) => mbsOf(b) <= T)
+      if (elig.length < k) return { valid: false, combos: 0, ek: 0 }
+      const e = esp(elig.map((b) => b.odd))
+      return { valid: true, combos: nCk(elig.length, k), ek: e[k] ?? 0 }
+    },
+    [B, bankoList, nonBanko],
+  )
+
+  const availableSizes = useMemo(
+    () => Array.from({ length: nonBankoCount }, (_, i) => i + 1).filter((k) => sysAtSize(k).valid),
+    [nonBankoCount, sysAtSize],
+  )
+  const validSizes = useMemo(() => sizes.filter((k) => sysAtSize(k).valid), [sizes, sysAtSize])
+
   const combos = useMemo(() => {
     if (mode !== "system") return 1
-    return validSizes.reduce((acc, k) => acc + nCk(nonBankoCount, k), 0)
-  }, [mode, validSizes, nonBankoCount])
+    return validSizes.reduce((acc, k) => acc + sysAtSize(k).combos, 0)
+  }, [mode, validSizes, sysAtSize])
 
   const bedel = (mode === "system" ? combos : 1) * misli * UNIT
 
   const maxWin = useMemo(() => {
     if (!active.length) return 0
     if (mode !== "system") return misli * UNIT * totalOdd
-    if (combos < 1) return 0
-    const bankoProd = active
-      .filter((b) => bankoSet.has(b.eventId))
-      .reduce((a, b) => a * b.odd, 1)
-    const e = esp(nonBanko.map((b) => b.odd))
-    const sum = validSizes.reduce((acc, k) => acc + (e[k] ?? 0), 0)
-    return misli * UNIT * bankoProd * sum
-  }, [active, mode, misli, totalOdd, combos, bankoSet, nonBanko, validSizes])
+    const bankoProd = bankoList.reduce((a, b) => a * b.odd, 1)
+    return misli * UNIT * validSizes.reduce((acc, k) => acc + bankoProd * sysAtSize(k).ek, 0)
+  }, [active, mode, misli, totalOdd, bankoList, validSizes, sysAtSize])
+
+  const mbsWarn = useMemo(() => {
+    if (!active.length) return ""
+    if (mode !== "system") {
+      return combiMbsOk ? "" : `Bu kupon en az ${Math.max(...active.map(mbsOf))} maç içermeli (MBS).`
+    }
+    if (nonBankoCount < 2) return "Sistem için en az 2 banko-dışı maç gerekir"
+    if (sizes.some((k) => !sysAtSize(k).valid)) return "Seçili sistem boyutu MBS'i sağlamıyor"
+    if (validSizes.length === 0) return "Bir sistem boyutu seçin"
+    return ""
+  }, [active, mode, combiMbsOk, nonBankoCount, sizes, validSizes, sysAtSize])
+
+  const invalid = useMemo(() => {
+    if (!active.length) return true
+    if (mode !== "system") return !combiMbsOk
+    return nonBankoCount < 2 || validSizes.length === 0 || sizes.some((k) => !sysAtSize(k).valid)
+  }, [active, mode, combiMbsOk, nonBankoCount, validSizes, sizes, sysAtSize])
 
   const isPicked = useCallback(
     (eventId: number, marketId: number, on: number) =>
@@ -237,9 +278,8 @@ export function CouponProvider({ children }: { children: ReactNode }) {
   useEffect(() => { refreshSaved() }, [refreshSaved])
 
   const save = useCallback(async () => {
-    if (!active.length) return
+    if (invalid) return
     const isSystem = mode === "system"
-    if (isSystem && (nonBankoCount < 2 || validSizes.length === 0)) return
     await srvRequest("placeCoupon", {
       type: isSystem ? "system" : "combi",
       misli,
@@ -253,7 +293,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     })
     setActive([]); setBankoIds([]); setSizes([]); setMode("combi")
     await refreshSaved()
-  }, [active, mode, misli, validSizes, nonBankoCount, bankoSet, refreshSaved])
+  }, [active, mode, misli, validSizes, invalid, bankoSet, refreshSaved])
 
   const removeSaved = useCallback(async (id: string) => {
     const prev = saved
@@ -270,11 +310,13 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     () => ({
       active, misli, saved, totalOdd, bedel, maxWin,
       mode, setMode, isBanko, toggleBanko, sizes, toggleSize, nonBankoCount, combos,
+      availableSizes, mbsWarn, invalid,
       isPicked, pick, remove, clear, setMisli, save, removeSaved, refreshSaved,
     }),
     [
       active, misli, saved, totalOdd, bedel, maxWin,
       mode, isBanko, toggleBanko, sizes, toggleSize, nonBankoCount, combos,
+      availableSizes, mbsWarn, invalid,
       isPicked, pick, remove, clear, setMisli, save, removeSaved, refreshSaved,
     ],
   )

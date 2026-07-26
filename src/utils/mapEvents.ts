@@ -140,6 +140,7 @@ function cellFor(ev: SbEvent, mkt: SbMarket | undefined, on: number, pick: strin
       ov: mkt.ov != null ? num(mkt.ov) : null,
       statId: statIdOf(ev),
       sportType: ev.st,
+      mbs: ev.mbs ?? null,
     },
   }
 }
@@ -158,6 +159,7 @@ function altUstCell(ev: SbEvent, mkt: SbMarket | undefined, which: "Alt" | "Üst
       ov: mkt.ov != null ? num(mkt.ov) : null,
       statId: statIdOf(ev),
       sportType: ev.st,
+      mbs: ev.mbs ?? null,
     },
   }
 }

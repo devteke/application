@@ -23,7 +23,7 @@ local function rebuild(events)
     if (not name or name == '') and ev.p then
       local t = {}; for _, x in ipairs(ev.p) do t[#t+1] = x.n end; name = table.concat(t, ' - ')
     end
-    byEvent[ev.i] = { i = ev.i, li = ev.li or ev.i, d = ev.d, name = name, st = ev.st, markets = markets }
+    byEvent[ev.i] = { i = ev.i, li = ev.li or ev.i, d = ev.d, name = name, st = ev.st, mbs = ev.mbs, markets = markets }
   end
   cache.byEvent, cache.at = byEvent, GetGameTimer()
 end
@@ -53,7 +53,8 @@ function Bulletin.resolve(eventId, marketId, on, now)
     eventId = ev.i, statId = ev.li, name = ev.name, startsAt = ev.d,
     marketId = m.i, marketName = m.n, sbt = m.sbt, ov = ov,
     on = on, pick = (LABELS[m.sbt] or {})[on] or tostring(on),
-    odd = o.od,   -- OTORİTER ORAN (client'ınki yok sayılır)
+    odd = o.od, 
+     mbs = ev.mbs or 1, 
   }, nil
 end
 

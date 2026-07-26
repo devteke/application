@@ -17,7 +17,7 @@ local function nCk(n, k)
   return res
 end
 
--- === OYNAMA (kombine + sistem) ===
+-- === OYNAMA (kombine + sistem, MBS-duyarlı) ===
 function Coupons.place(src, payload)
   if onCooldown(src, 'place', App.Config.PlaceCooldownMs) then return false, 'rate_limited' end
 
@@ -43,6 +43,7 @@ function Coupons.place(src, payload)
     seen[b.eventId] = true
     local r, err = App.Bulletin.resolve(b.eventId, b.marketId, b.on, now)
     if not r then return false, err end
+    r.mbs  = r.mbs or 1
     r.banko = (btype == 'system') and (b.banko == true) or false
     totalOdd = totalOdd * r.odd
     resolved[#resolved + 1] = r
@@ -52,33 +53,54 @@ function Coupons.place(src, payload)
 
   if btype == 'system' then
     if n < 3 then return false, 'system_min_selections' end
-    local M, bankoProd, nb = 0, 1.0, {}
+
+    local bankos, nb = {}, {}
     for _, r in ipairs(resolved) do
-      if r.banko then bankoProd = bankoProd * r.odd else M = M + 1; nb[#nb + 1] = r.odd end
+      if r.banko then bankos[#bankos + 1] = r else nb[#nb + 1] = r end
     end
+    local B, M = #bankos, #nb
     if M < 2 then return false, 'system_needs_nonbanko' end  -- en az 2 banko-dışı maç
+
+    local bankoProd = 1.0
+    for _, r in ipairs(bankos) do bankoProd = bankoProd * r.odd end
 
     local sizes = payload.sizes
     if type(sizes) ~= 'table' or #sizes == 0 then return false, 'invalid_sizes' end
+
     local seenK = {}
     cleanSizes, combos = {}, 0
+    local winSum = 0.0
     for _, k in ipairs(sizes) do
       if type(k) ~= 'number' or k ~= math.floor(k) or k < 1 or k > M then return false, 'invalid_size' end
       if not seenK[k] then
         seenK[k] = true
+        local T = B + k
+        -- Banko MBS: hepsi mbs<=T olmalı
+        for _, r in ipairs(bankos) do
+          if (r.mbs or 1) > T then return false, 'mbs_not_met' end
+        end
+        -- Uygun banko-dışı bacaklar (mbs<=T)
+        local elig = {}
+        for _, r in ipairs(nb) do
+          if (r.mbs or 1) <= T then elig[#elig + 1] = r.odd end
+        end
+        if #elig < k then return false, 'mbs_not_met' end
         cleanSizes[#cleanSizes + 1] = k
-        combos = combos + nCk(M, k)
+        combos = combos + nCk(#elig, k)
+        local e = App.Settle.esp(elig)
+        winSum = winSum + bankoProd * (e[k] or 0.0)
       end
     end
     if combos < 1 then return false, 'invalid_combos' end
 
-    local e = App.Settle.esp(nb)
-    local sum = 0.0
-    for _, k in ipairs(cleanSizes) do sum = sum + (e[k] or 0) end
     stake  = misli * combos * App.Config.UnitPrice
-    maxWin = math.floor(misli * bankoProd * sum + 0.5)
+    maxWin = math.floor(misli * winSum + 0.5)
   else
+    -- KOMBİNE + MBS: kupondaki toplam maç sayısı her bacağın mbs'inden büyük/eşit olmalı
     if App.Config.MaxOdd > 0 and totalOdd > App.Config.MaxOdd then return false, 'odd_too_high' end
+    for _, r in ipairs(resolved) do
+      if (r.mbs or 1) > n then return false, 'mbs_not_met' end
+    end
     combos = 1
     stake  = misli * App.Config.UnitPrice
     maxWin = math.floor(stake * totalOdd + 0.5)
@@ -102,6 +124,7 @@ function Coupons.place(src, payload)
       eventId = r.eventId, statId = r.statId, name = r.name, startsAt = r.startsAt,
       marketId = r.marketId, marketName = r.marketName, sbt = r.sbt, ov = r.ov,
       on = r.on, pick = r.pick, odd = r.odd, sportType = 'SOCCER',
+      mbs = r.mbs or 1,
       banko = r.banko or nil,
     }
   end
@@ -196,7 +219,7 @@ local function settleOnce()
     for i, b in ipairs(bets) do
       perBet[i] = App.Settle.bet(b, stats[b.statId])
       if perBet[i] == 'pending' then pending = true end
-      b.result = perBet[i]
+      b.result = perBet[i]     -- sistem hesabı b.result okuyor
     end
 
     if not pending then
@@ -205,7 +228,7 @@ local function settleOnce()
       local result, payout
 
       if meta.type == 'system' then
-        payout, result = App.Settle.system(bets, perBet, meta.sizes or {}, tonumber(r.misli) or 0)
+        payout, result = App.Settle.system(bets, meta.sizes or {}, tonumber(r.misli) or 0)
       else
         result = App.Settle.coupon(perBet)
         payout = 0

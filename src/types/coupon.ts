@@ -11,13 +11,12 @@ export interface Bet {
   pick: string
   odd: number
   startsAt: number
-
   sbt: number
   ov: number | null
   statId: number
   sportType: string
-
   banko?: boolean      // sistem kuponunda banko mu (her kombinasyonda)
+  mbs?: number | null
   result?: BetResult
 }
 
