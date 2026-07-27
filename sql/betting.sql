@@ -25,3 +25,17 @@
     claimed_at BIGINT      NULL,
     INDEX idx_citizenid_claimed (citizenid, claimed)
   );
+
+  -- Sıralama takma adları (ilk girişte sign-up ile doldurulur)
+CREATE TABLE IF NOT EXISTS `app_players` (
+  `citizenid`  VARCHAR(64) NOT NULL,
+  `name`       VARCHAR(32) NOT NULL,
+  `created_at` BIGINT NOT NULL DEFAULT 0,
+  `updated_at` BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`citizenid`),
+  UNIQUE KEY `uniq_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Leaderboard sorguları (status + settled_at) üzerinde gruplama yapar
+-- Not: Index zaten varsa bu satırı atla.
+ALTER TABLE `betting_coupons` ADD INDEX `idx_lb` (`status`, `settled_at`);

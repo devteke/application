@@ -1,0 +1,129 @@
+/* ============================================================
+   Leaderboard — SavedCoupons ile aynı gömülü sayfa mantığı
+   ============================================================ */
+.lb {
+  color: #e7e9ee;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.lb--embedded {
+  width: auto;
+  height: auto;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* ---------- Header ---------- */
+.lb__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #14161b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lb__back {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e7e9ee; cursor: pointer;
+  font-size: 18px; line-height: 1;
+}
+.lb__back:hover { background: rgba(255, 255, 255, 0.07); }
+.lb__headTitle { font-weight: 900; font-size: 13px; letter-spacing: 0.02em; }
+
+/* ---------- Filtre çubuğu ---------- */
+.lb-filters {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 10px 14px;
+  background: #0f1116;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lb-fgroup { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.lb-fdiv { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.10); margin: 0 2px; }
+.lb-chip {
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9aa0ab; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.lb-chip:hover { background: rgba(255, 255, 255, 0.06); color: #e7e9ee; }
+.lb-chip.is-active {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+/* ---------- Durum ---------- */
+.lb__state {
+  padding: 32px 16px; text-align: center; color: #8b909c; font-size: 13px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.lb__err { padding: 12px 14px; color: #ff6b6b; font-size: 12.5px; text-align: center; }
+.lb__retry {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04); color: #e7e9ee; font-weight: 800; font-size: 12px; cursor: pointer;
+}
+.lb__retry:hover { background: rgba(255,255,255,0.08); }
+
+/* ---------- Liste ---------- */
+.lb-list {
+  list-style: none; margin: 0; padding: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.lb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: #0f1116; border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lb-row__rank {
+  width: 30px; text-align: center; font-weight: 900; font-size: 14px; color: #8b909c;
+  font-variant-numeric: tabular-nums;
+}
+.lb-row--top { border-color: rgba(255, 255, 255, 0.12); }
+.lb-row--top1 { background: #16150c; }
+.lb-row--top2 { background: #131519; }
+.lb-row--top3 { background: #17120d; }
+.lb-row--me { outline: 1px solid #2f6df6; background: #172033; }
+.lb-row__name {
+  flex: 1; font-weight: 700; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lb-row__sub {
+  font-size: 11px; color: #8b909c; font-weight: 700; white-space: nowrap;
+}
+.lb-row__val {
+  font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.lb-row__val.is-pos { color: #37d67a; }
+.lb-row__val.is-neg { color: #ff6b6b; }
+
+/* Kendi satırın (top listede yoksa) */
+.lb-self {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px;
+  background: #172033; border: 1px dashed rgba(47, 109, 246, 0.6);
+}
+
+/* ---------- Sign-up (tam sayfa) ---------- */
+.lb-signup {
+  max-width: 380px; margin: 8px auto 0;
+  padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  text-align: center;
+}
+.lb-signup__icon { font-size: 40px; }
+.lb-signup__title { font-size: 18px; font-weight: 900; }
+.lb-signup__desc { font-size: 13px; color: #a7abb6; line-height: 1.55; }
+.lb-signup__input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #14161b; color: #e7e9ee; font-size: 15px; outline: none; text-align: center;
+}
+.lb-signup__input:focus { border-color: #2f6df6; }
+.lb-signup__btn {
+  width: 100%; padding: 12px; border-radius: 10px; border: none;
+  background: #2f6df6; color: #fff; font-weight: 800; font-size: 14px; cursor: pointer;
+}
+.lb-signup__btn:disabled { opacity: 0.5; cursor: default; }
+.lb-signup__hint { font-size: 11px; color: #6b7280; }

@@ -34,8 +34,9 @@ function Chevron({ small }: { small?: boolean }) {
 export default function LeftMenu(props: {
 	onOpenSavedCoupons?: () => void
 	onOpenMarkets?: () => void
+	onOpenLeaderboard?: () => void
 }) {
-	const { onOpenSavedCoupons, onOpenMarkets } = props
+	const { onOpenSavedCoupons, onOpenMarkets, onOpenLeaderboard } = props
 	const [sports, setSports] = useState<SportCategory[]>([])
 	const [collapsed, setCollapsed] = useState(false)
 	// Tek-aktif ana tab (accordion)
@@ -207,6 +208,14 @@ export default function LeftMenu(props: {
 				>
 					<span className="lm-footbtn__ic">🧾</span>
 					<span className="lm-footbtn__txt">Kayıtlı Kuponlar</span>
+				</button>
+				<button
+					className="lm-footbtn"
+					onClick={() => onOpenLeaderboard?.()}
+					title="Sıralama"
+				>
+					<span className="lm-footbtn__ic">🏆</span>
+					<span className="lm-footbtn__txt">Sıralama</span>
 				</button>
 
 				<button

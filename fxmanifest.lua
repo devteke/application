@@ -18,6 +18,7 @@ server_scripts {
   'server/bulletin.lua',
   'server/settle.lua',
   'server/coupons.lua',
+  'server/leaderboard.lua',
   'server/server.lua',
 }
 

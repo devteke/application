@@ -4,7 +4,7 @@ import { useNuiEvent } from './utils/useNuiEvent'
 import { fetchNui } from './utils/fetchNui'
 import { debugData } from './utils/debugData'
 import LeftMenu from './components/letfMenu'
-
+import Leaderboard from './components/Leaderboard'
 import MarketBar from './components/MarketBar'
 import TopBar from './components/Topbar'
 import MatchList from './components/MatchList'
@@ -17,7 +17,7 @@ import ToastHost from './components/Toast'
 debugData<boolean>([{ action: 'setVisible', data: true }])
 
 export default function App() {
-  const [view, setView] = useState<'markets' | 'savedCoupons'>('markets')
+  const [view, setView] = useState<'markets' | 'savedCoupons' | 'leaderboard'>('markets')
   const [visible, setVisible] = useState(false)
   useNuiEvent<boolean>('setVisible', setVisible)
 
@@ -47,8 +47,8 @@ export default function App() {
                   <LeftMenu
                     onOpenSavedCoupons={() => setView('savedCoupons')}
                     onOpenMarkets={() => setView('markets')}
+                    onOpenLeaderboard={() => setView('leaderboard')}
                   />
-
                   <div className="tablet__main">
                     {/* Maç listesi filtreleri yalnızca bültende */}
                     {isMarkets && <TopBar />}
@@ -58,13 +58,17 @@ export default function App() {
                         'tablet__content' + (isMarkets ? '' : ' tablet__content--page')
                       }
                     >
-                      {isMarkets ? (
+                      {view === 'markets' && (
                         <>
                           <MarketBar />
                           <MatchList />
                         </>
-                      ) : (
+                      )}
+                      {view === 'savedCoupons' && (
                         <SavedCoupons embedded onBack={() => setView('markets')} />
+                      )}
+                      {view === 'leaderboard' && (
+                        <Leaderboard onBack={() => setView('markets')} />
                       )}
                     </div>
                   </div>

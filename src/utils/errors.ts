@@ -47,6 +47,13 @@ const MESSAGES: Record<string, string> = {
   // silme
   not_deletable: "Bu kupon silinemez (bekleyen kuponlar silinemez).",
   unknown_action: "Bilinmeyen işlem.",
+  // leaderboard
+  invalid_name: "Geçersiz isim.",
+  name_length: "İsim 3-16 karakter olmalı.",
+  name_charset: "İsimde geçersiz karakter var.",
+  name_taken: "Bu isim alınmış, başka bir isim dene.",
+  invalid_period: "Geçersiz dönem.",
+  invalid_kind: "Geçersiz liste türü.",
 }
 
 export function errorText(code: string): string {
