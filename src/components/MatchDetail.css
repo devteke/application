@@ -214,6 +214,22 @@
   transform: none;
 }
 
+/* Salt-görüntü outcome: disabled görünüm — hepsi soluk, tıklanmaz */
+.md-oc--readonly {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.md-oc--readonly:hover {
+  background: #0d0f13;
+  border-color: rgba(255, 255, 255, 0.07);
+  transform: none;
+}
+
+.md-oc--readonly .md-oc__od {
+  color: #8b909c;
+}
+
 /* Küçük ekranlarda tek kolon: performans + okunabilirlik */
 @media (max-width: 1100px) {
   .md {

@@ -124,14 +124,20 @@ export default function LeftMenu(props: {
 					!error &&
 					sports.map((sport) => {
 						const sportOpen = activeSport === sport.i
+						const disabled = sport.st !== 'SOCCER'
 						const countries = [...sport.c].sort((a, b) => a.p - b.p)
 
 						return (
-							<div key={sport.i} className="lm-sport">
+							<div
+								key={sport.i}
+								className={'lm-sport' + (disabled ? ' lm-sport--disabled' : '')}
+							>
 								{/* --- Ana tab (spor) --- */}
 								<button
 									className={'lm-sport__head' + (sportOpen ? ' is-open' : '')}
-									onClick={() => handleSportClick(sport.i)}
+									onClick={() => !disabled && handleSportClick(sport.i)}
+									disabled={disabled}
+									aria-disabled={disabled}
 									title={collapsed ? sport.n : undefined}
 								>
 									<span className="lm-sport__icon">
@@ -142,7 +148,7 @@ export default function LeftMenu(props: {
 									<Chevron />
 								</button>
 
-								{!collapsed && sportOpen && (
+								{!collapsed && !disabled && sportOpen && (
 									<div className="lm-sport__body">
 										{countries.map((country) => {
 											const key = `${sport.i}:${country.i}`

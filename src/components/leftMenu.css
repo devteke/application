@@ -136,6 +136,15 @@
 .lm-sport__head.is-open .lm-sport__name {
 	color: var(--accent);
 }
+/* --- Futbol harici sporlar: disabled görünüm --- */
+.lm-sport--disabled .lm-sport__head {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.lm-sport--disabled .lm-sport__head:hover {
+	background: transparent;
+}
 
 .lm-count {
 	flex: 0 0 auto;
