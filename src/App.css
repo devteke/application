@@ -26,9 +26,8 @@
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-
-	/* embedded sayfaların scroll'u için kritik */
 	min-height: 0;
+	position: relative
 }
 
 /* Content alanı: içinde sayfa (SavedCoupons) tam boy çalışabilsin */
@@ -56,76 +55,83 @@
 .tablet__content::-webkit-scrollbar {
 	width: 8px;
 }
+
 .tablet__content::-webkit-scrollbar-track {
 	background: transparent;
 }
+
 .tablet__content::-webkit-scrollbar-thumb {
 	background: rgba(255, 255, 255, 0.14);
 	border-radius: 4px;
 }
+
 .tablet__content::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.24);
 }
 
 /* Stage: tüm kompozisyonu ortala */
-.tablet-stage{
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+.tablet-stage {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
 }
 
 /* Tablet + coupon: İKİ KOLON yan yana, birlikte ortalı.
    flex-start => ikisi de üstten başlar; tablet, kupon içeriğiyle ESNEMEZ. */
-.tablet-wrap{
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 16px;
+.tablet-wrap {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 16px;
 }
 
 /* Tablet içi sayfa helper'ları (SavedCoupons embedded) */
 .tablet__page {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
 .tablet__pageBody {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 /* SavedCoupons gibi kendi iç scroll'u olan sayfalarda dış gutter'ı kaldır
    -> sağdaki boş şerit gider, panel köşeye yapışır. */
 .tablet__content--page {
-  overflow: hidden;
-  scrollbar-gutter: auto;
+	overflow: hidden;
+	scrollbar-gutter: auto;
 }
 
 /* Embedded sayfa gövdesi (SavedCoupons listesi) scroll'u — UI ile uyumlu bar */
 .tablet__pageBody {
-  overflow-x: hidden;
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+	overflow-x: hidden;
+	/* Firefox */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
+
 .tablet__pageBody::-webkit-scrollbar {
-  width: 8px;
+	width: 8px;
 }
+
 .tablet__pageBody::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
+
 .tablet__pageBody::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
+	background: rgba(255, 255, 255, 0.14);
+	border-radius: 4px;
 }
+
 .tablet__pageBody::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.24);
+	background: rgba(255, 255, 255, 0.24);
 }
