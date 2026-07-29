@@ -20,6 +20,9 @@ end
 -- Anti-flood AKSİYON BAZLI (place ve list birbirini kilitlemez)
 -- ============================================================
 local rpcCd = {}
+local claimCd = {}
+local CLAIM_THROTTLE_MS = 30 * 1000
+
 RegisterNetEvent('app:srv', function(reqId, action, payload)
     local src = source
     if type(reqId) ~= 'number' or type(action) ~= 'string' then
@@ -35,7 +38,11 @@ RegisterNetEvent('app:srv', function(reqId, action, payload)
     rpcCd[src][action] = now + App.Config.RpcCooldownMs
 
     CreateThread(function()
-        App.Economy.claimPending(src) -- birikmiş offline ödemeleri yatır
+        local tnow = GetGameTimer()
+        if not claimCd[src] or tnow >= claimCd[src] then
+            claimCd[src] = tnow + CLAIM_THROTTLE_MS
+            App.Economy.claimPending(src) -- birikmiş offline ödemeleri yatır (throttled)
+        end
         local ok, data
         if action == 'placeCoupon' then
             ok, data = App.Coupons.place(src, payload)
@@ -133,6 +140,7 @@ AddEventHandler('playerDropped', function()
     local s = source
     rpcCd[s] = nil
     buckets[s] = nil
+    claimCd[s] = nil
 end)
 
 AddEventHandler('QBCore:Server:PlayerLoaded', function(player)

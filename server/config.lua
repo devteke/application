@@ -25,6 +25,7 @@ App.Config = {
     StatsPath = '/api/web/v1/statistics/sportType/%s/match/%s',
 
     SettleIntervalMs = 60 * 1000,
+    UseTestStats = GetConvar('app_use_test_stats', 'false') == 'true',
     -- === Leaderboard (sıralama) ===
     Leaderboard = {
         TopLimit = 100, -- her listede en fazla kaç oyuncu

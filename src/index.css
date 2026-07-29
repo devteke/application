@@ -19,3 +19,34 @@ body {
 	overflow: hidden;
 	user-select: none;
 }
+
+/* ============================================================
+   Global tooltip — FiveM/CEF native "title" göstermediği için
+   ============================================================ */
+.app-tip {
+	position: fixed;
+	z-index: 99999;
+	max-width: 360px;
+	padding: 7px 10px;
+	background: #1b1e25;
+	color: #e7e9ee;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+	font-size: 12px;
+	line-height: 1.4;
+	font-weight: 600;
+	white-space: normal;
+	/* tam metni sar; artık kesme (…) yok */
+	word-break: break-word;
+	pointer-events: none;
+	/* fareyi engellemesin */
+	opacity: 0;
+	transform: translateY(2px);
+	transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.app-tip.is-show {
+	opacity: 1;
+	transform: none;
+}
